@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+
+        <item android:id="@+id/nav_home"
+            android:title="@string/menuHome"
+            android:icon="@drawable/baseline_home_24" />
+
+        <item android:id="@+id/nav_internal"
+            android:title="@string/menuInternal"
+            android:icon="@drawable/baseline_home_24" />
+
+        <item android:id="@+id/nav_card"
+            android:title="@string/menuCard"
+            android:icon="@drawable/baseline_home_24" />
+    </group>
+
+    <item android:title="more">
+        <menu>
+            <item android:id="@+id/nav_about"
+                android:title="@string/menuAbout"
+                android:icon="@drawable/baseline_info_24" />
+        </menu>
+    </item>
+</menu>

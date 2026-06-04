@@ -1,0 +1,14 @@
+<resources>
+    <string name="appName">FileExplorer</string>
+
+    <string name="openDrawer">Open Navigation Drawer</string>
+    <string name="closeDrawer">Close Navigation Drawer</string>
+
+    <string name="menuHome">Home</string>
+    <string name="menuInternal">Internal Storage</string>
+    <string name="menuCard">SD Card</string>
+    <string name="menuAbout">About</string>
+
+    <string name="internalFragment">Internal Fragment</string>
+    <string name="fragmentCard">SD Card Fragment</string>
+</resources>
