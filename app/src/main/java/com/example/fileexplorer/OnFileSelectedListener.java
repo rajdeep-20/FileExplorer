@@ -4,5 +4,6 @@ import java.io.File;
 
 public interface OnFileSelectedListener {
     void onFileClick(File file);
-    void onFileLongClick(File file);
+    void onFileLongClick(File file, int position);
+
 }

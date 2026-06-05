@@ -8,6 +8,5 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="Home Fragment"
-        android:textSize="32sp">
-    </TextView>
+        android:textSize="32sp"></TextView>
 </LinearLayout>
