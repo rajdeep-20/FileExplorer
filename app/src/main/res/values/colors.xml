@@ -1,10 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="darkGrey">#A9A9A9</color>
     <color name="green">#FF00B59C</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
-    <color name="darkGrey">#A9A9A9</color>
 
+    <!-- App surface / background -->
+    <color name="surface_dark">#FF121212</color>
+    <color name="surface_card">#FF1E1E1E</color>
+    <color name="path_bar_bg">#FF1A1A2E</color>
+
+    <!-- File-type accent colors (vivid, distinguishable) -->
+    <color name="color_image">#FF2979FF</color>     <!-- Blue  – JPG/PNG/JPEG -->
+    <color name="color_pdf">#FFFF1744</color>       <!-- Red   – PDF -->
+    <color name="color_audio">#FF00E676</color>     <!-- Green – MP3/WAV -->
+    <color name="color_video">#FFFF6D00</color>     <!-- Orange – MP4 -->
+    <color name="color_doc">#FF2196F3</color>       <!-- Light-blue – DOC -->
+    <color name="color_txt">#FFFFD740</color>       <!-- Amber – TXT -->
+    <color name="color_apk">#FFE040FB</color>       <!-- Purple – APK -->
+    <color name="color_folder">#FFFF9100</color>    <!-- Deep-orange – Folders -->
+    <color name="color_generic">#FF78909C</color>   <!-- Grey-blue – everything else -->
+
+    <!-- Faint versions for card backgrounds (40% alpha) -->
+    <color name="color_image_bg">#292979FF</color>
+    <color name="color_pdf_bg">#29FF1744</color>
+    <color name="color_audio_bg">#2900E676</color>
+    <color name="color_video_bg">#29FF6D00</color>
+    <color name="color_doc_bg">#292196F3</color>
+    <color name="color_txt_bg">#29FFD740</color>
+    <color name="color_apk_bg">#29E040FB</color>
+    <color name="color_folder_bg">#29FF9100</color>
+    <color name="color_generic_bg">#2978909C</color>
 </resources>
