@@ -1,5 +1,6 @@
 package com.example.fileexplorer;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
 import android.text.format.Formatter;
@@ -33,14 +34,13 @@ public class FileAdapter extends RecyclerView.Adapter<FileViewHolder> {
                 LayoutInflater.from(context).inflate(R.layout.file_container, parent, false));
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull FileViewHolder holder, int position) {
         File current = file.get(position);
 
-        // --- Name ---
         holder.tvName.setText(current.getName());
 
-        // --- Size / item count ---
         if (current.isDirectory()) {
             File[] children = current.listFiles();
             int count = 0;
@@ -49,12 +49,11 @@ public class FileAdapter extends RecyclerView.Adapter<FileViewHolder> {
                     if (!f.isHidden()) count++;
                 }
             }
-            holder.tvSize.setText(count + " files");
+            holder.tvSize.setText(count + "files");
         } else {
             holder.tvSize.setText(Formatter.formatShortFileSize(context, current.length()));
         }
 
-        // --- Icon + accent color ---
         String name = current.getName().toLowerCase();
         int iconRes;
         int accentColor;
@@ -100,9 +99,17 @@ public class FileAdapter extends RecyclerView.Adapter<FileViewHolder> {
         holder.iconBg.setBackground(circle);
 
         // --- Click listeners ---
-        holder.container.setOnClickListener(v -> listener.onFileClick(current));
+        holder.container.setOnClickListener(v -> {
+            int pos = holder.getAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) {
+                listener.onFileClick(file.get(pos));
+            }
+        });
         holder.container.setOnLongClickListener(v -> {
-            listener.onFileLongClick(current, position);
+            int pos = holder.getAdapterPosition();
+            if (pos != RecyclerView.NO_POSITION) {
+                listener.onFileLongClick(file.get(pos), pos);
+            }
             return true;
         });
     }

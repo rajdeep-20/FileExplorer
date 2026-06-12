@@ -48,11 +48,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             public void handleOnBackPressed() {
                 if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     drawerLayout.closeDrawer(GravityCompat.START);
-                } else if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
-                    getSupportFragmentManager().popBackStack();
                 } else {
-                    setEnabled(false);
-                    getOnBackPressedDispatcher().onBackPressed();
+                    androidx.fragment.app.Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                    if (currentFragment instanceof HomeFragment) {
+                        moveTaskToBack(true);
+                    } else if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                        getSupportFragmentManager().popBackStack();
+                    } else {
+                        // If for some reason we aren't at HomeFragment and backstack is empty, 
+                        // go back to HomeFragment instead of closing
+                        getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.fragment_container, new HomeFragment())
+                                .commit();
+                    }
                 }
             }
         });
@@ -61,12 +69,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
+        
+        getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+
         if (id == R.id.nav_home) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new HomeFragment()).addToBackStack(null).commit();
+            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new HomeFragment()).commit();
         } else if (id == R.id.nav_internal) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new InternalFragment()).addToBackStack(null).commit();
+            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new InternalFragment()).commit();
         } else if (id == R.id.nav_card) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new CardFragment()).addToBackStack(null).commit();
+            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new CardFragment()).commit();
         }
         else {
             Toast.makeText(this, R.string.menuAbout, Toast.LENGTH_SHORT).show();
