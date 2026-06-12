@@ -4,60 +4,54 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="6dp"
-    app:cardCornerRadius="14dp"
-    app:cardElevation="4dp"
+    android:layout_margin="4dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
     app:cardBackgroundColor="@color/surface_card">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="12dp">
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="8dp">
 
         <!-- Colored icon container -->
         <FrameLayout
             android:id="@+id/icon_bg"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="6dp"
             android:background="@drawable/ic_icon_bg">
 
             <ImageView
                 android:id="@+id/img_fileType"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_folder" />
         </FrameLayout>
 
-        <!-- Name and size -->
-        <LinearLayout
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/tv_fileName"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="14dp">
+            android:layout_marginTop="4dp"
+            android:text="File Name.png"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:gravity="center"/>
 
-            <TextView
-                android:id="@+id/tv_fileName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="File Name.png"
-                android:textColor="@color/white"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/tvFileSize"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:textColor="@color/darkGrey"
-                android:textSize="12sp" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/tvFileSize"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1.2 MB"
+            android:textColor="@color/darkGrey"
+            android:textSize="8sp"
+            android:gravity="center" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>
