@@ -4,9 +4,17 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 
+import androidx.recyclerview.widget.GridLayoutManager;
+
+import com.example.fileexplorer.FileAdapter;
+import com.example.fileexplorer.FileItem;
 import com.example.fileexplorer.R;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,8 +44,29 @@ public class CategorizedFragment extends BaseFIleFragment {
     }
 
     @Override
-    protected List<File> getFilesToDisplay() {
-        return findFiles(path);
+    protected void displayFiles() {
+        recyclerView = view.findViewById(getRecyclerView());
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
+        fileAdapter = new FileAdapter(getContext(), fileList, this);
+        recyclerView.setAdapter(fileAdapter);
+
+        // For categorized search, we use a custom loading logic that searches recursively
+        new Thread(() -> {
+            List<FileItem> items = findFiles(path.toPath());
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    fileList.clear();
+                    fileList.addAll(items);
+                    fileAdapter.notifyDataSetChanged();
+                });
+            }
+        }).start();
+    }
+
+    @Override
+    protected String getTargetDirectoryPath() {
+        return path.getAbsolutePath();
     }
 
     @Override
@@ -46,9 +75,9 @@ public class CategorizedFragment extends BaseFIleFragment {
     }
 
     @Override
-    protected void openDirectory(File file) {
+    protected void openDirectory(FileItem fileItem) {
         Bundle bundle = new Bundle();
-        bundle.putString("path", file.getAbsolutePath());
+        bundle.putString("path", fileItem.getAbsolutePath());
         InternalFragment internalFragment = new InternalFragment();
         internalFragment.setArguments(bundle);
         getParentFragmentManager().beginTransaction()
@@ -57,16 +86,16 @@ public class CategorizedFragment extends BaseFIleFragment {
                 .commit();
     }
 
-    private ArrayList<File> findFiles(File file) {
-        ArrayList<File> arrayList = new ArrayList<>();
-        File[] files = file.listFiles();
-
-        if (files != null) {
-            for (File singleFile : files) {
-                if (singleFile.isDirectory() && !singleFile.isHidden()) {
-                    arrayList.addAll(findFiles(singleFile));
+    private List<FileItem> findFiles(Path dir) {
+        List<FileItem> items = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            for (Path entry : stream) {
+                if (Files.isDirectory(entry)) {
+                    if (!entry.getFileName().toString().startsWith(".")) {
+                        items.addAll(findFiles(entry));
+                    }
                 } else {
-                    String name = singleFile.getName().toLowerCase();
+                    String name = entry.getFileName().toString().toLowerCase();
                     boolean shouldAdd = false;
                     if (fileType != null) {
                         switch (fileType) {
@@ -91,11 +120,13 @@ public class CategorizedFragment extends BaseFIleFragment {
                         }
                     }
                     if (shouldAdd) {
-                        arrayList.add(singleFile);
+                        items.add(new FileItem(entry.getFileName().toString(), entry.toAbsolutePath().toString()));
                     }
                 }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return arrayList;
+        return items;
     }
 }

@@ -3,6 +3,12 @@
     <style name="Base.Theme.FileExplorer" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:scrollbarThumbVertical">@drawable/scroll</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:scrollbarSize">8dp</item>
+        <item name="android:fastScrollEnabled">true</item>
+        <item name="android:fastScrollThumbDrawable">@drawable/scroll</item>
+        <item name="android:fastScrollTrackDrawable">@android:color/transparent</item>
     </style>
 
     <style name="Theme.FileExplorer" parent="Base.Theme.FileExplorer" />
