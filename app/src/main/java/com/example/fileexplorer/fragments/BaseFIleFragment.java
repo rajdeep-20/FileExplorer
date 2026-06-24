@@ -130,6 +130,13 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
             }
 
             @Override
+            public void onItemsAdded(List<FileItem> newItems) {
+                int startPos = fileList.size();
+                fileList.addAll(newItems);
+                fileAdapter.notifyItemRangeInserted(startPos, newItems.size());
+            }
+
+            @Override
             public void onItemMetadataUpdated(int position, FileItem updatedItem) {
                 fileAdapter.notifyItemChanged(position);
             }

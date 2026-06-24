@@ -4,15 +4,17 @@ import android.os.Handler;
 import android.os.Looper;
 
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Predicate;
 
 /**
  * The Android 14 Directory Engine
@@ -28,6 +30,7 @@ public class FileLoadEngine {
 
     public interface FileLoadListener {
         void onStructureLoaded(List<FileItem> items);
+        void onItemsAdded(List<FileItem> newItems);
         void onItemMetadataUpdated(int position, FileItem updatedItem);
     }
 
@@ -37,8 +40,7 @@ public class FileLoadEngine {
             Path dir = Paths.get(targetDirectoryPath);
 
             // Phase 1: Instant Stream Scan
-            // newDirectoryStream is low-level and does not load file metadata into memory
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            try (java.nio.file.DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
                 for (Path entry : stream) {
                     String name = entry.getFileName().toString();
                     String fullPath = entry.toAbsolutePath().toString();
@@ -55,6 +57,53 @@ public class FileLoadEngine {
                 // Phase 2: Trigger lazy background metadata population
                 fetchMetadataAsynchronously(fileList, listener);
             });
+        });
+    }
+
+    public void loadRecursive(String targetDirectoryPath, Predicate<Path> filter, FileLoadListener listener) {
+        structureExecutor.execute(() -> {
+            Path startPath = Paths.get(targetDirectoryPath);
+            List<FileItem> batch = new ArrayList<>();
+            final int BATCH_SIZE = 50;
+
+            try {
+                Files.walkFileTree(startPath, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                        if (dir.getFileName() != null && dir.getFileName().toString().startsWith(".")) {
+                            return FileVisitResult.SKIP_SUBTREE;
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        if (filter.test(file)) {
+                            FileItem item = new FileItem(file.getFileName().toString(), file.toAbsolutePath().toString());
+                            item.updateMetadata(attrs.isDirectory(), attrs.size());
+                            batch.add(item);
+
+                            if (batch.size() >= BATCH_SIZE) {
+                                List<FileItem> currentBatch = new ArrayList<>(batch);
+                                batch.clear();
+                                mainHandler.post(() -> listener.onItemsAdded(currentBatch));
+                            }
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+
+                if (!batch.isEmpty()) {
+                    mainHandler.post(() -> listener.onItemsAdded(batch));
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
     }
 

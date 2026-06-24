@@ -8,15 +8,13 @@ import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.example.fileexplorer.FileAdapter;
 import com.example.fileexplorer.FileItem;
+import com.example.fileexplorer.FileLoadEngine;
 import com.example.fileexplorer.R;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class CategorizedFragment extends BaseFIleFragment {
 
@@ -51,17 +49,50 @@ public class CategorizedFragment extends BaseFIleFragment {
         fileAdapter = new FileAdapter(getContext(), fileList, this);
         recyclerView.setAdapter(fileAdapter);
 
-        // For categorized search, we use a custom loading logic that searches recursively
-        new Thread(() -> {
-            List<FileItem> items = findFiles(path.toPath());
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    fileList.clear();
-                    fileList.addAll(items);
-                    fileAdapter.notifyDataSetChanged();
-                });
+        fileList.clear();
+        fileAdapter.notifyDataSetChanged();
+
+        fileLoadEngine.loadRecursive(path.getAbsolutePath(), this::filterFile, new FileLoadEngine.FileLoadListener() {
+            @Override
+            public void onStructureLoaded(List<FileItem> items) {
+                // Not used in recursive load
             }
-        }).start();
+
+            @Override
+            public void onItemsAdded(List<FileItem> newItems) {
+                if (getActivity() != null) {
+                    int startPos = fileList.size();
+                    fileList.addAll(newItems);
+                    fileAdapter.notifyItemRangeInserted(startPos, newItems.size());
+                }
+            }
+
+            @Override
+            public void onItemMetadataUpdated(int position, FileItem updatedItem) {
+                fileAdapter.notifyItemChanged(position);
+            }
+        });
+    }
+
+    private boolean filterFile(Path entry) {
+        String name = entry.getFileName().toString().toLowerCase();
+        if (fileType != null) {
+            switch (fileType) {
+                case "images":
+                    return name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif");
+                case "video":
+                    return name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".3gp");
+                case "music":
+                    return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".ogg");
+                case "documents":
+                    return name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".docx") || name.endsWith(".txt") || name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".ppt") || name.endsWith(".pptx");
+                case "APK":
+                    return name.endsWith(".apk");
+                case "downloads":
+                    return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -84,49 +115,5 @@ public class CategorizedFragment extends BaseFIleFragment {
                 .replace(R.id.fragment_container, internalFragment)
                 .addToBackStack("InteranlFragment")
                 .commit();
-    }
-
-    private List<FileItem> findFiles(Path dir) {
-        List<FileItem> items = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
-            for (Path entry : stream) {
-                if (Files.isDirectory(entry)) {
-                    if (!entry.getFileName().toString().startsWith(".")) {
-                        items.addAll(findFiles(entry));
-                    }
-                } else {
-                    String name = entry.getFileName().toString().toLowerCase();
-                    boolean shouldAdd = false;
-                    if (fileType != null) {
-                        switch (fileType) {
-                            case "images":
-                                shouldAdd = name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif");
-                                break;
-                            case "video":
-                                shouldAdd = name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".3gp");
-                                break;
-                            case "music":
-                                shouldAdd = name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".ogg");
-                                break;
-                            case "documents":
-                                shouldAdd = name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".docx") || name.endsWith(".txt") || name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".ppt") || name.endsWith(".pptx");
-                                break;
-                            case "APK":
-                                shouldAdd = name.endsWith(".apk");
-                                break;
-                            case "downloads":
-                                shouldAdd = true;
-                                break;
-                        }
-                    }
-                    if (shouldAdd) {
-                        items.add(new FileItem(entry.getFileName().toString(), entry.toAbsolutePath().toString()));
-                    }
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return items;
     }
 }
