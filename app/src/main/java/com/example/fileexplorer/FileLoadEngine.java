@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,11 +41,18 @@ public class FileLoadEngine {
             Path dir = Paths.get(targetDirectoryPath);
 
             // Phase 1: Instant Stream Scan
-            try (java.nio.file.DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
                 for (Path entry : stream) {
                     String name = entry.getFileName().toString();
                     String fullPath = entry.toAbsolutePath().toString();
-                    fileList.add(new FileItem(name, fullPath));
+                    FileItem item = new FileItem(name, fullPath);
+                    
+                    // Quick check for directory (usually cached in stream)
+                    if (Files.isDirectory(entry)) {
+                        item.updateMetadata(true, 0, 0);
+                    }
+                    
+                    fileList.add(item);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -80,7 +88,7 @@ public class FileLoadEngine {
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                         if (filter.test(file)) {
                             FileItem item = new FileItem(file.getFileName().toString(), file.toAbsolutePath().toString());
-                            item.updateMetadata(attrs.isDirectory(), attrs.size());
+                            item.updateMetadata(attrs.isDirectory(), attrs.size(), attrs.lastModifiedTime().toMillis());
                             batch.add(item);
 
                             if (batch.size() >= BATCH_SIZE) {
@@ -119,7 +127,7 @@ public class FileLoadEngine {
                     // Android 14 C-level Optimization: Grabs ALL attributes in 1 atomic file system request
                     BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
                     
-                    item.updateMetadata(attrs.isDirectory(), attrs.size());
+                    item.updateMetadata(attrs.isDirectory(), attrs.size(), attrs.lastModifiedTime().toMillis());
 
                     // Inform the adapter to redraw only this item
                     mainHandler.post(() -> listener.onItemMetadataUpdated(index, item));

@@ -12,4 +12,12 @@
     <string name="internalFragment">Internal Fragment</string>
     <string name="fragmentCard">SD Card Fragment</string>
     <string name="folder">Folder</string>
+
+    <string name="sort_by">Sort By</string>
+    <string name="sort_name_asc">Name (A-Z)</string>
+    <string name="sort_name_desc">Name (Z-A)</string>
+    <string name="sort_time_asc">Oldest First</string>
+    <string name="sort_time_desc">Newest First</string>
+    <string name="sort_size_asc">Smallest First</string>
+    <string name="sort_size_desc">Largest First</string>
 </resources>

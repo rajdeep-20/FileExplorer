@@ -56,6 +56,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
 
     protected View view;
     protected String[] items = {"Details", "Rename", "Delete", "Share"};
+    protected SortingOrder.sortingOrder currentSortOrder = SortingOrder.sortingOrder.TIME_DESC;
 
     @Override
     public void setupScrollBar(RecyclerView recyclerView) {
@@ -126,6 +127,9 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
             public void onStructureLoaded(List<FileItem> items) {
                 fileList.clear();
                 fileList.addAll(items);
+                if (!fileList.isEmpty()) {
+                    fileList.sort(currentSortOrder.getComparator());
+                }
                 fileAdapter.notifyDataSetChanged();
             }
 
@@ -235,7 +239,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
                 int currentPos = fileList.indexOf(fileItem);
                 if (currentPos != -1) {
                     FileItem updatedItem = new FileItem(newName, dest.getAbsolutePath());
-                    updatedItem.updateMetadata(fileItem.isDirectory(), fileItem.getFileSize());
+                    updatedItem.updateMetadata(fileItem.isDirectory(), fileItem.getFileSize(), fileItem.getLastModified());
                     fileList.set(currentPos, updatedItem);
                     fileAdapter.notifyItemChanged(currentPos);
                     Toast.makeText(getContext(), "Renamed", Toast.LENGTH_SHORT).show();
@@ -256,6 +260,14 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
             startActivity(Intent.createChooser(share, "Share"));
         } catch (Exception e) {
             Toast.makeText(getContext(), "Cannot Share", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void sortFiles(SortingOrder.sortingOrder sortOrder) {
+        this.currentSortOrder = sortOrder;
+        if (!fileList.isEmpty()) {
+            fileList.sort(sortOrder.getComparator());
+            fileAdapter.notifyDataSetChanged();
         }
     }
 
