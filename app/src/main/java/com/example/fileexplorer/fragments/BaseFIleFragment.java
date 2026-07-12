@@ -29,9 +29,12 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.fileexplorer.FileAdapter;
+import com.example.fileexplorer.FileItem;
+import com.example.fileexplorer.FileLoadEngine;
 import com.example.fileexplorer.FileOpener;
 import com.example.fileexplorer.OnFileSelectedListener;
 import com.example.fileexplorer.R;
+import com.example.fileexplorer.ScrollBarInterface;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -45,18 +48,20 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public abstract class BaseFIleFragment extends Fragment implements OnFileSelectedListener {
+public abstract class BaseFIleFragment extends Fragment implements OnFileSelectedListener, ScrollBarInterface {
     protected RecyclerView recyclerView;
-    protected List<File> fileList = new ArrayList<>();
+    protected List<FileItem> fileList = new ArrayList<>();
     protected FileAdapter fileAdapter;
-    protected List<File> MasterFile = new ArrayList<>();
+    protected FileLoadEngine fileLoadEngine = new FileLoadEngine();
 
     protected View view;
     protected String[] items = {"Details", "Rename", "Delete", "Share"};
+    protected SortingOrder.sortingOrder currentSortOrder = SortingOrder.sortingOrder.TIME_DESC;
 
-    private int currentPage = 0;
-    private int chunkPage = 100;
-    private boolean isLoading = false;
+    @Override
+    public void setupScrollBar(RecyclerView recyclerView) {
+        // Handled in XML
+    }
 
     @Nullable
     @Override
@@ -71,11 +76,11 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
 
     protected abstract void onViewCreateCustom(View view);
 
-    protected abstract List<File> getFilesToDisplay();
+    protected abstract String getTargetDirectoryPath();
 
     protected abstract int getRecyclerView();
 
-    protected abstract void openDirectory(File file);
+    protected abstract void openDirectory(FileItem fileItem);
 
     protected void runTimePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -113,67 +118,52 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
     protected void displayFiles() {
         recyclerView = view.findViewById(getRecyclerView());
         recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 5));
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
         fileAdapter = new FileAdapter(getContext(), fileList, this);
         recyclerView.setAdapter(fileAdapter);
 
-        setupScrollListener();
-
-        new Thread(() -> {
-            List<File> result = getFilesToDisplay();
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    MasterFile = new ArrayList<>(result);
-                    fileList.clear();
-                    fileAdapter.notifyDataSetChanged();
-                    currentPage = 0;
-                    LoadPages();
-                });
-            }
-        }).start();
-    }
-
-    private void setupScrollListener() {
-        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        fileLoadEngine.loadDirectory(getTargetDirectoryPath(), new FileLoadEngine.FileLoadListener() {
             @Override
-            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                if (dy > 0) {
-                    GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
-                    if (layoutManager != null && !isLoading && !recyclerView.isComputingLayout() && layoutManager.findLastCompletelyVisibleItemPosition() >= fileList.size() - 5) {
-                        LoadPages();
-                    }
+            public void onStructureLoaded(List<FileItem> items) {
+                fileList.clear();
+                fileList.addAll(items);
+                if (!fileList.isEmpty()) {
+                    fileList.sort(currentSortOrder.getComparator());
                 }
+                fileAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            public void onItemsAdded(List<FileItem> newItems) {
+                int startPos = fileList.size();
+                fileList.addAll(newItems);
+                fileAdapter.notifyItemRangeInserted(startPos, newItems.size());
+            }
+
+            @Override
+            public void onItemMetadataUpdated(int position, FileItem updatedItem) {
+                fileAdapter.notifyItemChanged(position);
             }
         });
     }
 
-    private void LoadPages() {
-        if (MasterFile.isEmpty())
-            return;
-        int start = currentPage * chunkPage;
-        if (start >= MasterFile.size())
-            return;
-
-        isLoading = true;
-        int end = Math.min(start + chunkPage, MasterFile.size());
-
-        List<File> newItems = MasterFile.subList(start, end);
-
-        int insertPos = fileList.size();
-        fileList.addAll(newItems);
-        fileAdapter.notifyItemRangeInserted(insertPos, newItems.size());
-
-        currentPage += 1;
-        isLoading = false;
+    @Override
+    public void onFileClick(File file) {
+        // Deprecated, use onFileItemClick
     }
 
     @Override
-    public void onFileClick(File file) {
-        if (file.isDirectory()) {
-            openDirectory(file);
+    public void onFileLongClick(File file, int position) {
+        // Deprecated, use onFileItemLongClick
+    }
+
+    @Override
+    public void onFileItemClick(FileItem fileItem) {
+        if (fileItem.isDirectory()) {
+            openDirectory(fileItem);
         } else {
             try {
-                FileOpener.openFile(getContext(), file);
+                FileOpener.openFile(getContext(), new File(fileItem.getAbsolutePath()));
             } catch (IOException e) {
                 Toast.makeText(getContext(), "Error opening File", Toast.LENGTH_SHORT).show();
             }
@@ -182,75 +172,76 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
 
     @SuppressLint("SetText18n")
     @Override
-    public void onFileLongClick(File file, int position) {
+    public void onFileItemLongClick(FileItem fileItem, int position) {
         final Dialog optionalDialog = new Dialog(getContext());
         optionalDialog.setContentView(R.layout.option_diallogue);
         ListView listView = optionalDialog.findViewById(R.id.List);
         listView.setAdapter(new CustomAdpator());
         listView.setOnItemClickListener((parent, v, pos, id) -> {
-            handleOptionClick(items[pos], file, optionalDialog);
+            handleOptionClick(items[pos], fileItem, optionalDialog);
         });
         optionalDialog.show();
     }
 
-    private void handleOptionClick(String selectedItem, File file, Dialog dialog) {
+    private void handleOptionClick(String selectedItem, FileItem fileItem, Dialog dialog) {
+        File file = new File(fileItem.getAbsolutePath());
         if (selectedItem.equals("Details")) {
-            showDetails(file);
+            showDetails(fileItem);
         } else if (selectedItem.equals("Rename")) {
-            showRenameDailog(file);
+            showRenameDailog(fileItem);
         } else if (selectedItem.equals("Share")) {
             shareFile(file);
         } else if (selectedItem.equals("Delete")) {
-            showDeletedDialog(file);
+            showDeletedDialog(fileItem);
         }
         dialog.dismiss();
     }
 
-    private void showDeletedDialog(File file) {
+    private void showDeletedDialog(FileItem fileItem) {
+        File file = new File(fileItem.getAbsolutePath());
         new AlertDialog.Builder(getContext())
                 .setTitle("Delete")
-                .setMessage("Delete " + file.getName() + "?")
+                .setMessage("Delete " + fileItem.getName() + "?")
                 .setPositiveButton("Delete", (d, w) -> {
                     if (file.delete()) {
-                        int currentPos = fileList.indexOf(file);
+                        int currentPos = fileList.indexOf(fileItem);
                         if (currentPos != -1) {
                             fileList.remove(currentPos);
                             fileAdapter.notifyItemRemoved(currentPos);
-                            MasterFile.remove(file);
                             Toast.makeText(getContext(), "Deleted", Toast.LENGTH_SHORT).show();
                         }
                     }
                 }).setNegativeButton("Cancel", null).show();
     }
 
-    private void showDetails(File file) {
+    private void showDetails(FileItem fileItem) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle("Details");
+        File file = new File(fileItem.getAbsolutePath());
         String date = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(file.lastModified()));
-        builder.setMessage("Name: " + file.getName() + "\nSize: " + Formatter.formatShortFileSize(getContext(), file.length()) + "\nPath: " + file.getAbsolutePath() + "\nModified: " + date);
+        builder.setMessage("Name: " + fileItem.getName() + "\nSize: " + Formatter.formatShortFileSize(getContext(), fileItem.getFileSize()) + "\nPath: " + fileItem.getAbsolutePath() + "\nModified: " + date);
         builder.setPositiveButton("OK", null);
         builder.show();
     }
 
-    private void showRenameDailog(File file) {
+    private void showRenameDailog(FileItem fileItem) {
         AlertDialog.Builder rename = new AlertDialog.Builder(getContext());
         rename.setTitle("Rename");
         EditText input = new EditText(getContext());
-        input.setText(file.getName());
+        input.setText(fileItem.getName());
         rename.setView(input);
         rename.setPositiveButton("OK", (d, w) -> {
+            File file = new File(fileItem.getAbsolutePath());
             String newName = input.getText().toString();
             File dest = new File(file.getParent(), newName);
 
             if (file.renameTo(dest)) {
-                int currentPos = fileList.indexOf(file);
+                int currentPos = fileList.indexOf(fileItem);
                 if (currentPos != -1) {
-                    fileList.set(currentPos, dest);
+                    FileItem updatedItem = new FileItem(newName, dest.getAbsolutePath());
+                    updatedItem.updateMetadata(fileItem.isDirectory(), fileItem.getFileSize(), fileItem.getLastModified());
+                    fileList.set(currentPos, updatedItem);
                     fileAdapter.notifyItemChanged(currentPos);
-                    int masterPos = MasterFile.indexOf(file);
-                    if (masterPos != -1) {
-                        MasterFile.set(masterPos, dest);
-                    }
                     Toast.makeText(getContext(), "Renamed", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -269,6 +260,14 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
             startActivity(Intent.createChooser(share, "Share"));
         } catch (Exception e) {
             Toast.makeText(getContext(), "Cannot Share", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void sortFiles(SortingOrder.sortingOrder sortOrder) {
+        this.currentSortOrder = sortOrder;
+        if (!fileList.isEmpty()) {
+            fileList.sort(sortOrder.getComparator());
+            fileAdapter.notifyDataSetChanged();
         }
     }
 

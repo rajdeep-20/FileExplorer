@@ -4,11 +4,17 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 
+import androidx.recyclerview.widget.GridLayoutManager;
+
+import com.example.fileexplorer.FileAdapter;
+import com.example.fileexplorer.FileItem;
+import com.example.fileexplorer.FileLoadEngine;
 import com.example.fileexplorer.R;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class CategorizedFragment extends BaseFIleFragment {
 
@@ -36,8 +42,62 @@ public class CategorizedFragment extends BaseFIleFragment {
     }
 
     @Override
-    protected List<File> getFilesToDisplay() {
-        return findFiles(path);
+    protected void displayFiles() {
+        recyclerView = view.findViewById(getRecyclerView());
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 3));
+        fileAdapter = new FileAdapter(getContext(), fileList, this);
+        recyclerView.setAdapter(fileAdapter);
+
+        fileList.clear();
+        fileAdapter.notifyDataSetChanged();
+
+        fileLoadEngine.loadRecursive(path.getAbsolutePath(), this::filterFile, new FileLoadEngine.FileLoadListener() {
+            @Override
+            public void onStructureLoaded(List<FileItem> items) {
+                // Not used in recursive load
+            }
+
+            @Override
+            public void onItemsAdded(List<FileItem> newItems) {
+                if (getActivity() != null) {
+                    int startPos = fileList.size();
+                    fileList.addAll(newItems);
+                    fileAdapter.notifyItemRangeInserted(startPos, newItems.size());
+                }
+            }
+
+            @Override
+            public void onItemMetadataUpdated(int position, FileItem updatedItem) {
+                fileAdapter.notifyItemChanged(position);
+            }
+        });
+    }
+
+    private boolean filterFile(Path entry) {
+        String name = entry.getFileName().toString().toLowerCase();
+        if (fileType != null) {
+            switch (fileType) {
+                case "images":
+                    return name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif");
+                case "video":
+                    return name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".3gp");
+                case "music":
+                    return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".ogg");
+                case "documents":
+                    return name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".docx") || name.endsWith(".txt") || name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".ppt") || name.endsWith(".pptx");
+                case "APK":
+                    return name.endsWith(".apk");
+                case "downloads":
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    protected String getTargetDirectoryPath() {
+        return path.getAbsolutePath();
     }
 
     @Override
@@ -46,56 +106,14 @@ public class CategorizedFragment extends BaseFIleFragment {
     }
 
     @Override
-    protected void openDirectory(File file) {
+    protected void openDirectory(FileItem fileItem) {
         Bundle bundle = new Bundle();
-        bundle.putString("path", file.getAbsolutePath());
+        bundle.putString("path", fileItem.getAbsolutePath());
         InternalFragment internalFragment = new InternalFragment();
         internalFragment.setArguments(bundle);
         getParentFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, internalFragment)
                 .addToBackStack("InteranlFragment")
                 .commit();
-    }
-
-    private ArrayList<File> findFiles(File file) {
-        ArrayList<File> arrayList = new ArrayList<>();
-        File[] files = file.listFiles();
-
-        if (files != null) {
-            for (File singleFile : files) {
-                if (singleFile.isDirectory() && !singleFile.isHidden()) {
-                    arrayList.addAll(findFiles(singleFile));
-                } else {
-                    String name = singleFile.getName().toLowerCase();
-                    boolean shouldAdd = false;
-                    if (fileType != null) {
-                        switch (fileType) {
-                            case "images":
-                                shouldAdd = name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif");
-                                break;
-                            case "video":
-                                shouldAdd = name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".3gp");
-                                break;
-                            case "music":
-                                shouldAdd = name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".ogg");
-                                break;
-                            case "documents":
-                                shouldAdd = name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".docx") || name.endsWith(".txt") || name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".ppt") || name.endsWith(".pptx");
-                                break;
-                            case "APK":
-                                shouldAdd = name.endsWith(".apk");
-                                break;
-                            case "downloads":
-                                shouldAdd = true;
-                                break;
-                        }
-                    }
-                    if (shouldAdd) {
-                        arrayList.add(singleFile);
-                    }
-                }
-            }
-        }
-        return arrayList;
     }
 }

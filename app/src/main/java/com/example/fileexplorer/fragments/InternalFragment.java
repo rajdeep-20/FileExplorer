@@ -6,11 +6,10 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.example.fileexplorer.FileItem;
 import com.example.fileexplorer.R;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 public class InternalFragment extends BaseFIleFragment {
     private ImageView img_back;
@@ -42,8 +41,8 @@ public class InternalFragment extends BaseFIleFragment {
     }
 
     @Override
-    protected List<File> getFilesToDisplay() {
-        return findFiles(storage);
+    protected String getTargetDirectoryPath() {
+        return storage.getAbsolutePath();
     }
 
     @Override
@@ -52,36 +51,14 @@ public class InternalFragment extends BaseFIleFragment {
     }
 
     @Override
-    protected void openDirectory(File file) {
+    protected void openDirectory(FileItem fileItem) {
         Bundle bundle = new Bundle();
-        bundle.putString("path", file.getAbsolutePath());
+        bundle.putString("path", fileItem.getAbsolutePath());
         InternalFragment internalFragment = new InternalFragment();
         internalFragment.setArguments(bundle);
         getParentFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, internalFragment)
                 .addToBackStack("InternalFragment")
                 .commit();
-    }
-
-    private ArrayList<File> findFiles(File file) {
-        ArrayList<File> arrayList = new ArrayList<>();
-        File[] files = file.listFiles();
-
-        if (files != null) {
-            for (File singleFile : files) {
-                if (singleFile.isDirectory() && !singleFile.isHidden()) {
-                    arrayList.add(singleFile);
-                } else {
-                    String name = singleFile.getName().toLowerCase();
-                    if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") ||
-                            name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".apk") ||
-                            name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".txt") ||
-                            name.endsWith(".mp4") || name.endsWith(".raw") || name.endsWith(".dng")) {
-                        arrayList.add(singleFile);
-                    }
-                }
-            }
-        }
-        return arrayList;
     }
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/surface_dark"
@@ -13,26 +14,28 @@
 
         <ImageView
             android:id="@+id/imgBack"
-            android:padding="14dp"
-            android:src="@drawable/outline_dropdown"
             android:layout_width="60dp"
-            android:layout_height="60dp">
-        </ImageView>
+            android:layout_height="60dp"
+            android:padding="14dp"
+            android:src="@drawable/outline_dropdown" />
 
         <TextView
             android:id="@+id/tv_pathHolder"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:gravity="center_vertical"
             android:text="Path/"
             android:textColor="@color/white"
-            android:textSize="18sp"
-            android:gravity="center_vertical"
-            android:layout_width="match_parent"
-            android:layout_height="60dp">
-        </TextView>
+            android:textSize="18sp" />
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
+    <com.example.fileexplorer.ScrollBar
         android:id="@+id/recycler_internal"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-    </androidx.recyclerview.widget.RecyclerView>
+        android:layout_height="match_parent"
+        app:fastScrollEnabled="true"
+        app:fastScrollHorizontalThumbDrawable="@drawable/fast_scroll_thumb"
+        app:fastScrollHorizontalTrackDrawable="@drawable/fast_scroll_track"
+        app:fastScrollVerticalThumbDrawable="@drawable/fast_scroll_thumb"
+        app:fastScrollVerticalTrackDrawable="@drawable/fast_scroll_track" />
 </LinearLayout>

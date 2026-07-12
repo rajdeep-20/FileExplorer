@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
@@ -9,8 +10,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-    android:layout_weight="1"
-    android:orientation="vertical"
+        android:layout_weight="1"
+        android:orientation="vertical"
         android:padding="10dp">
 
         <LinearLayout
@@ -200,31 +201,31 @@
         android:layout_height="0dp"
         android:layout_weight="2"
         android:orientation="vertical">
-        
-        
-       <View
-           android:layout_width="match_parent"
-           android:layout_height="1dp"
-           android:background="@color/green">
 
-       </View>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/green" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_marginTop="8dp"
+            android:padding="8dp"
             android:text="Recents"
             android:textColor="@color/green"
-            android:padding="8dp"
-            android:textSize="18sp"
-            android:layout_marginLeft="8dp"
-            android:layout_marginTop="8dp">
+            android:textSize="18sp" />
 
-        </TextView>
-       <androidx.recyclerview.widget.RecyclerView
-           android:id="@+id/recyclerRecents"
-           android:layout_margin="10dp"
-           android:layout_width="match_parent"
-           android:layout_height="match_parent">
-
-       </androidx.recyclerview.widget.RecyclerView>
+        <com.example.fileexplorer.ScrollBar
+            android:id="@+id/recyclerRecents"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="10dp"
+            app:fastScrollEnabled="true"
+            app:fastScrollHorizontalThumbDrawable="@drawable/fast_scroll_thumb"
+            app:fastScrollHorizontalTrackDrawable="@drawable/fast_scroll_track"
+            app:fastScrollVerticalThumbDrawable="@drawable/fast_scroll_thumb"
+            app:fastScrollVerticalTrackDrawable="@drawable/fast_scroll_track" />
     </LinearLayout>
 </LinearLayout>

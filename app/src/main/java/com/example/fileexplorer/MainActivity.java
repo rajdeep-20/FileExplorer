@@ -1,6 +1,7 @@
 package com.example.fileexplorer;
 
 import android.os.Bundle;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
@@ -12,9 +13,11 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.example.fileexplorer.fragments.BaseFIleFragment;
 import com.example.fileexplorer.fragments.CardFragment;
 import com.example.fileexplorer.fragments.HomeFragment;
 import com.example.fileexplorer.fragments.InternalFragment;
+import com.example.fileexplorer.fragments.SortingOrder;
 import com.google.android.material.navigation.NavigationView;
 
 
@@ -64,6 +67,35 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
         });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        SortingOrder.sortingOrder order = null;
+
+        if (id == R.id.sort_name_asc) order = SortingOrder.sortingOrder.NAME_ASC;
+        else if (id == R.id.sort_name_desc) order = SortingOrder.sortingOrder.NAME_DESC;
+        else if (id == R.id.sort_time_asc) order = SortingOrder.sortingOrder.TIME_ASC;
+        else if (id == R.id.sort_time_desc) order = SortingOrder.sortingOrder.TIME_DESC;
+        else if (id == R.id.sort_size_asc) order = SortingOrder.sortingOrder.SIZE_ASC;
+        else if (id == R.id.sort_size_desc) order = SortingOrder.sortingOrder.SIZE_DESC;
+
+        if (order != null) {
+            androidx.fragment.app.Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+            if (currentFragment instanceof BaseFIleFragment) {
+                ((BaseFIleFragment) currentFragment).sortFiles(order);
+            }
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override

@@ -3,5 +3,11 @@
     <style name="Base.Theme.FileExplorer" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="android:scrollbarThumbVertical">@drawable/scroll</item>
+        <item name="android:scrollbarTrackVertical">@android:color/transparent</item>
+        <item name="android:scrollbarSize">8dp</item>
+        <item name="android:fastScrollEnabled">true</item>
+        <item name="android:fastScrollThumbDrawable">@drawable/scroll</item>
+        <item name="android:fastScrollTrackDrawable">@android:color/transparent</item>
     </style>
 </resources>
