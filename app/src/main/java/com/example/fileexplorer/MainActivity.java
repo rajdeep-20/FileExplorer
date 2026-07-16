@@ -13,11 +13,12 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.example.fileexplorer.fragments.BaseFIleFragment;
+import com.example.fileexplorer.fragments.BaseFileFragment;
 import com.example.fileexplorer.fragments.CardFragment;
 import com.example.fileexplorer.fragments.HomeFragment;
 import com.example.fileexplorer.fragments.InternalFragment;
 import com.example.fileexplorer.fragments.SortingOrder;
+import com.example.fileexplorer.Remote.DeviceIdentityManager;
 import com.google.android.material.navigation.NavigationView;
 
 
@@ -29,6 +30,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        // Initialize remote device identity (fetches FCM token and registers with backend)
+        DeviceIdentityManager.initialize(this);
+        
         drawerLayout = findViewById(R.id.drawer_layout);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -78,19 +83,19 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
-        SortingOrder.sortingOrder order = null;
+        SortingOrder.SortingOrderEnum order = null;
 
-        if (id == R.id.sort_name_asc) order = SortingOrder.sortingOrder.NAME_ASC;
-        else if (id == R.id.sort_name_desc) order = SortingOrder.sortingOrder.NAME_DESC;
-        else if (id == R.id.sort_time_asc) order = SortingOrder.sortingOrder.TIME_ASC;
-        else if (id == R.id.sort_time_desc) order = SortingOrder.sortingOrder.TIME_DESC;
-        else if (id == R.id.sort_size_asc) order = SortingOrder.sortingOrder.SIZE_ASC;
-        else if (id == R.id.sort_size_desc) order = SortingOrder.sortingOrder.SIZE_DESC;
+        if (id == R.id.sort_name_asc) order = SortingOrder.SortingOrderEnum.NAME_ASC;
+        else if (id == R.id.sort_name_desc) order = SortingOrder.SortingOrderEnum.NAME_DESC;
+        else if (id == R.id.sort_time_asc) order = SortingOrder.SortingOrderEnum.TIME_ASC;
+        else if (id == R.id.sort_time_desc) order = SortingOrder.SortingOrderEnum.TIME_DESC;
+        else if (id == R.id.sort_size_asc) order = SortingOrder.SortingOrderEnum.SIZE_ASC;
+        else if (id == R.id.sort_size_desc) order = SortingOrder.SortingOrderEnum.SIZE_DESC;
 
         if (order != null) {
             androidx.fragment.app.Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
-            if (currentFragment instanceof BaseFIleFragment) {
-                ((BaseFIleFragment) currentFragment).sortFiles(order);
+            if (currentFragment instanceof BaseFileFragment) {
+                ((BaseFileFragment) currentFragment).sortFiles(order);
             }
             return true;
         }

@@ -7,6 +7,11 @@
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.INTERNET"></uses-permission>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"></uses-permission>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"></uses-permission>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"></uses-permission>
+
 
     <application
         android:allowBackup="true"
@@ -17,6 +22,7 @@
         android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.FileExplorer">
         <activity
             android:name=".MainActivity"
@@ -27,6 +33,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <service android:name=".Remote.RfeFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

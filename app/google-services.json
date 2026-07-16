@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "125940310487",
+    "project_id": "remote-fileexplorer",
+    "storage_bucket": "remote-fileexplorer.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:125940310487:android:9266c625757ebe54ebab92",
+        "android_client_info": {
+          "package_name": "com.example.fileexplorer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRMu5KD-53H3vrBivgUhVTeE4vCnCj5bA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

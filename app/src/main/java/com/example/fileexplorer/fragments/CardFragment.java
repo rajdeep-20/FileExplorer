@@ -12,7 +12,7 @@ import com.example.fileexplorer.R;
 
 import java.io.File;
 
-public class CardFragment extends BaseFIleFragment {
+public class CardFragment extends BaseFileFragment {
     private ImageView img_back;
     private TextView tv_pathHolder;
     private File storage;

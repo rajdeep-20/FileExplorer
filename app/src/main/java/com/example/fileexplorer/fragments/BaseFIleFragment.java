@@ -48,7 +48,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public abstract class BaseFIleFragment extends Fragment implements OnFileSelectedListener, ScrollBarInterface {
+public abstract class BaseFileFragment extends Fragment implements OnFileSelectedListener, ScrollBarInterface {
     protected RecyclerView recyclerView;
     protected List<FileItem> fileList = new ArrayList<>();
     protected FileAdapter fileAdapter;
@@ -56,7 +56,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
 
     protected View view;
     protected String[] items = {"Details", "Rename", "Delete", "Share"};
-    protected SortingOrder.sortingOrder currentSortOrder = SortingOrder.sortingOrder.TIME_DESC;
+    protected SortingOrder.SortingOrderEnum currentSortOrder = SortingOrder.SortingOrderEnum.TIME_DESC;
 
     @Override
     public void setupScrollBar(RecyclerView recyclerView) {
@@ -176,7 +176,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
         final Dialog optionalDialog = new Dialog(getContext());
         optionalDialog.setContentView(R.layout.option_diallogue);
         ListView listView = optionalDialog.findViewById(R.id.List);
-        listView.setAdapter(new CustomAdpator());
+        listView.setAdapter(new CustomAdapter());
         listView.setOnItemClickListener((parent, v, pos, id) -> {
             handleOptionClick(items[pos], fileItem, optionalDialog);
         });
@@ -188,7 +188,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
         if (selectedItem.equals("Details")) {
             showDetails(fileItem);
         } else if (selectedItem.equals("Rename")) {
-            showRenameDailog(fileItem);
+            showRenameDialog(fileItem);
         } else if (selectedItem.equals("Share")) {
             shareFile(file);
         } else if (selectedItem.equals("Delete")) {
@@ -224,7 +224,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
         builder.show();
     }
 
-    private void showRenameDailog(FileItem fileItem) {
+    private void showRenameDialog(FileItem fileItem) {
         AlertDialog.Builder rename = new AlertDialog.Builder(getContext());
         rename.setTitle("Rename");
         EditText input = new EditText(getContext());
@@ -263,7 +263,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
         }
     }
 
-    public void sortFiles(SortingOrder.sortingOrder sortOrder) {
+    public void sortFiles(SortingOrder.SortingOrderEnum sortOrder) {
         this.currentSortOrder = sortOrder;
         if (!fileList.isEmpty()) {
             fileList.sort(sortOrder.getComparator());
@@ -271,7 +271,7 @@ public abstract class BaseFIleFragment extends Fragment implements OnFileSelecte
         }
     }
 
-    class CustomAdpator extends BaseAdapter {
+    class CustomAdapter extends BaseAdapter {
         @Override
         public int getCount() {
             return items.length;

@@ -16,7 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class CategorizedFragment extends BaseFIleFragment {
+public class CategorizedFragment extends BaseFileFragment {
 
     private File path;
     private String fileType;

@@ -1,4 +1,5 @@
 [versions]
+google-services = "4.4.2"
 agp = "9.2.1"
 dexter = "6.2.3"
 junit = "4.13.2"
@@ -9,6 +10,11 @@ material = "1.10.0"
 activityKtx = "1.13.0"
 constraintlayout = "2.1.4"
 glide = "4.16.0"
+firebaseBom = "33.7.0"
+workmanager = "2.10.0"
+retrofit = "2.11.0"
+gson = "2.11.0"
+okhttp = "4.12.0"
 
 [libraries]
 dexter = { module = "com.karumi:dexter", version.ref = "dexter" }
@@ -21,7 +27,15 @@ activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+workmanager = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workmanager" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 

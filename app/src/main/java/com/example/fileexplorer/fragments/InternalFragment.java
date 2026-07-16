@@ -11,7 +11,7 @@ import com.example.fileexplorer.R;
 
 import java.io.File;
 
-public class InternalFragment extends BaseFIleFragment {
+public class InternalFragment extends BaseFileFragment {
     private ImageView img_back;
     private TextView tv_pathHolder;
     private File storage;
