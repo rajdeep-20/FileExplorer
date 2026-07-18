@@ -1,4 +1,4 @@
-package com.example.fileexplorer.Remote;
+package com.example.fileExplorer.Remote;
 
 import android.annotation.SuppressLint;
 import android.util.Log;

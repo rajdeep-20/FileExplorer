@@ -1,4 +1,4 @@
-package com.example.fileexplorer.fragments;
+package com.example.fileExplorer.fragments;
 
 import android.os.Bundle;
 import android.os.Environment;
@@ -6,10 +6,10 @@ import android.view.View;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 
-import com.example.fileexplorer.FileAdapter;
-import com.example.fileexplorer.FileItem;
-import com.example.fileexplorer.FileLoadEngine;
-import com.example.fileexplorer.R;
+import com.example.fileExplorer.FileAdapter;
+import com.example.fileExplorer.FileItem;
+import com.example.fileExplorer.FileLoadEngine;
+import com.example.fileExplorer.R;
 
 import java.io.File;
 import java.nio.file.Path;

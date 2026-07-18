@@ -1,4 +1,4 @@
-package com.example.fileexplorer;
+package com.example.fileExplorer;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

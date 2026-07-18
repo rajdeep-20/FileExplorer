@@ -1,4 +1,4 @@
-package com.example.fileexplorer;
+package com.example.fileExplorer;
 
 import android.content.Context;
 
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.example.fileexplorer", appContext.getPackageName());
+        assertEquals("com.example.fileExplorer", appContext.getPackageName());
     }
 }

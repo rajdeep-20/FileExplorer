@@ -1,10 +1,10 @@
-package com.example.fileexplorer.Remote;
+package com.example.fileExplorer.Remote;
 
 import android.content.Context;
 import android.os.FileObserver;
 import android.util.Log;
 
-import com.example.fileexplorer.BuildConfig;
+import com.example.fileExplorer.BuildConfig;
 
 import java.io.File;
 import java.util.ArrayList;

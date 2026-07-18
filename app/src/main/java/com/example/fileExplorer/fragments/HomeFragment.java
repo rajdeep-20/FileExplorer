@@ -1,12 +1,12 @@
-package com.example.fileexplorer.fragments;
+package com.example.fileExplorer.fragments;
 
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
 import android.widget.LinearLayout;
 
-import com.example.fileexplorer.FileItem;
-import com.example.fileexplorer.R;
+import com.example.fileExplorer.FileItem;
+import com.example.fileExplorer.R;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;

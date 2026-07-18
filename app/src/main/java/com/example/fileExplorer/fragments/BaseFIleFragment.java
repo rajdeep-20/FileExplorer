@@ -1,4 +1,4 @@
-package com.example.fileexplorer.fragments;
+package com.example.fileExplorer.fragments;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -28,13 +28,13 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.fileexplorer.FileAdapter;
-import com.example.fileexplorer.FileItem;
-import com.example.fileexplorer.FileLoadEngine;
-import com.example.fileexplorer.FileOpener;
-import com.example.fileexplorer.OnFileSelectedListener;
-import com.example.fileexplorer.R;
-import com.example.fileexplorer.ScrollBarInterface;
+import com.example.fileExplorer.FileAdapter;
+import com.example.fileExplorer.FileItem;
+import com.example.fileExplorer.FileLoadEngine;
+import com.example.fileExplorer.FileOpener;
+import com.example.fileExplorer.OnFileSelectedListener;
+import com.example.fileExplorer.R;
+import com.example.fileExplorer.ScrollBarInterface;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;

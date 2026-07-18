@@ -1,4 +1,4 @@
-package com.example.fileexplorer;
+package com.example.fileExplorer;
 
 import android.os.Bundle;
 import android.view.Menu;
@@ -13,13 +13,13 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-import com.example.fileexplorer.Remote.SyncScheduler;
-import com.example.fileexplorer.fragments.BaseFileFragment;
-import com.example.fileexplorer.fragments.CardFragment;
-import com.example.fileexplorer.fragments.HomeFragment;
-import com.example.fileexplorer.fragments.InternalFragment;
-import com.example.fileexplorer.fragments.SortingOrder;
-import com.example.fileexplorer.Remote.DeviceIdentityManager;
+import com.example.fileExplorer.Remote.SyncScheduler;
+import com.example.fileExplorer.fragments.BaseFileFragment;
+import com.example.fileExplorer.fragments.CardFragment;
+import com.example.fileExplorer.fragments.HomeFragment;
+import com.example.fileExplorer.fragments.InternalFragment;
+import com.example.fileExplorer.fragments.SortingOrder;
+import com.example.fileExplorer.Remote.DeviceIdentityManager;
 import com.google.android.material.navigation.NavigationView;
 
 
@@ -35,7 +35,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // Initialize remote device identity (fetches FCM token and registers with backend)
         DeviceIdentityManager.initialize(this);
         
         drawerLayout = findViewById(R.id.drawer_layout);
@@ -103,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onResume() {
         super.onResume();
-        com.example.fileexplorer.Remote.DeltaSyncManager.getInstance(this).start();
+        com.example.fileExplorer.Remote.DeltaSyncManager.getInstance(this).start();
         
         if (hasStoragePermission() && shouldSync()) {
             SyncScheduler.triggerImmediateSync(this);
@@ -114,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onPause() {
         super.onPause();
-        com.example.fileexplorer.Remote.DeltaSyncManager.getInstance(this).stop();
+        com.example.fileExplorer.Remote.DeltaSyncManager.getInstance(this).stop();
     }
 
     @Override

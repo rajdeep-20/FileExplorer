@@ -1,4 +1,4 @@
-package com.example.fileexplorer;
+package com.example.fileExplorer;
 
 import org.junit.Test;
 

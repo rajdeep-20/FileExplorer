@@ -1,6 +1,6 @@
-package com.example.fileexplorer.fragments;
+package com.example.fileExplorer.fragments;
 
-import com.example.fileexplorer.FileItem;
+import com.example.fileExplorer.FileItem;
 import java.util.Comparator;
 
 public class SortingOrder {

@@ -32,7 +32,7 @@
         </TextView>
     </LinearLayout>
 
-    <com.example.fileexplorer.ScrollBar
+    <com.example.fileExplorer.ScrollBar
         android:id="@+id/recycler_internal"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -1,4 +1,4 @@
-package com.example.fileexplorer.Remote;
+package com.example.fileExplorer.Remote;
 
 import java.util.List;
 import java.util.Map;
