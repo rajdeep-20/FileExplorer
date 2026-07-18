@@ -13,6 +13,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.example.fileexplorer.Remote.SyncScheduler;
 import com.example.fileexplorer.fragments.BaseFileFragment;
 import com.example.fileexplorer.fragments.CardFragment;
 import com.example.fileexplorer.fragments.HomeFragment;
@@ -25,6 +26,9 @@ import com.google.android.material.navigation.NavigationView;
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private DrawerLayout drawerLayout;
+    private static final String PREFS_NAME = "rfe_sync_prefs";
+    private static final String KEY_LAST_SYNC_TIME = "last_sync_time_ms";
+    private static final long SYNC_COOLDOWN_MS = 60 * 60 * 1000L; // 1 hour
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +76,45 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
         });
+    }
+
+    private boolean hasStoragePermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            return android.os.Environment.isExternalStorageManager();
+        } else {
+            return androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    && androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    private boolean shouldSync() {
+        long lastSync = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getLong(KEY_LAST_SYNC_TIME, 0);
+        return (System.currentTimeMillis() - lastSync) > SYNC_COOLDOWN_MS;
+    }
+
+    private void markSynced() {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putLong(KEY_LAST_SYNC_TIME, System.currentTimeMillis())
+                .apply();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        com.example.fileexplorer.Remote.DeltaSyncManager.getInstance(this).start();
+        
+        if (hasStoragePermission() && shouldSync()) {
+            SyncScheduler.triggerImmediateSync(this);
+            markSynced();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        com.example.fileexplorer.Remote.DeltaSyncManager.getInstance(this).stop();
     }
 
     @Override

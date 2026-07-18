@@ -32,14 +32,14 @@ public class ApiClient {
             synchronized (ApiClient.class) {
                 if (retrofit == null) {
                     HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-                    logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+                    logging.setLevel(HttpLoggingInterceptor.Level.HEADERS);
 
 
                     OkHttpClient client = new OkHttpClient.Builder()
                             .addInterceptor(logging)
                             .connectTimeout(30, TimeUnit.SECONDS)
-                            .readTimeout(60, TimeUnit.SECONDS)
-                            .writeTimeout(120, TimeUnit.SECONDS)
+                            .readTimeout(5, TimeUnit.MINUTES)
+                            .writeTimeout(10, TimeUnit.MINUTES)
                             .build();
 
                     Gson gson = new GsonBuilder().setLenient().registerTypeAdapter(Instant.class, new InstantTypeAdapter()).create();

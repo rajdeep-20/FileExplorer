@@ -21,13 +21,14 @@ public interface RfeApiService {
     @POST("api/v1/devices/heartbeat")
     Call<Void> heartbeat(@Body Map<String, String> payload);
 
-
-
-
-
     @POST("api/v1/sync/metadata")
     Call<Map<String, Integer>> syncMetaData(@Header("X-Device-ID") String deviceID, @Body List<FileMetaDataDto> metaDataDtoList);
 
+    @POST("api/v1/sync/delta/upsert")
+    Call<Void> syncDeltaUpsert(@Header("X-Device-ID") String deviceID, @Body List<FileMetaDataDto> deltaList);
+
+    @POST("api/v1/sync/delta/delete")
+    Call<Void> syncDeltaDelete(@Header("X-Device-ID") String deviceID, @Header("X-File-Path") String path);
 
     @GET("api/v1/jobs/pending")
     Call<List<JobDto>> getPendingJobs(@Header("X-Device-ID") String deviceID);
@@ -35,13 +36,16 @@ public interface RfeApiService {
     @POST("api/v1/jobs/claim")
     Call<JobDto> claimNextJobs(@Header("X-Device-ID") String deviceID);
 
-
-    @POST("api/v1/jobs/{jobID}/status")
+    @POST("api/v1/jobs/{jobID}/complete")
     Call<Void> updateJobStatus(
             @Path("jobID") String jobID,
             @Body Map<String, String> payload
     );
+
     @Multipart
     @POST("api/v1/jobs/upload/{jobID}")
     Call<Void> uploadFile(@Path("jobID") String jobID, @Part MultipartBody.Part file);
+    
+    @GET("api/v1/jobs/download/{jobID}")
+    Call<okhttp3.ResponseBody> downloadFile(@Path("jobID") String jobID);
 }

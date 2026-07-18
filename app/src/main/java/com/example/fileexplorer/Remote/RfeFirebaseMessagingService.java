@@ -1,9 +1,7 @@
 package com.example.fileexplorer.Remote;
 
 import android.annotation.SuppressLint;
-import android.nfc.Tag;
 import android.util.Log;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
@@ -29,6 +27,7 @@ public class RfeFirebaseMessagingService extends FirebaseMessagingService {
 
         if("CHECK_JOBS".equals(type)){
             Log.i(TAG, "CHECK_JOBS received --- enqueuing JobProcessingWorker");
+            SyncScheduler.triggerImmediateJobCheck(getApplicationContext());
         }
         else {
             Log.w(TAG, "Unknown FCM Message type" + type);

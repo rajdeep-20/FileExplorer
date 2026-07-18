@@ -1,7 +1,5 @@
 package com.example.fileexplorer.Remote;
 
-import java.time.Instant;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,9 +10,10 @@ import lombok.NoArgsConstructor;
 public class FileMetaDataDto {
     private String id;
     private String deviceID;
-    private String name;
     private String path;
+    private String parentPath;
+    private String name;
     private Long size;
-    private Instant modifiedDate;
+    private Long lastModified;
     private Boolean isDirectory;
 }

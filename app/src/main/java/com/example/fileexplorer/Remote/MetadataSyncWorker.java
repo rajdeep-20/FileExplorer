@@ -15,12 +15,14 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.SneakyThrows;
 
-import okio.FileMetadata;
 import retrofit2.Response;
 
 /**
@@ -45,6 +47,7 @@ public class MetadataSyncWorker extends Worker {
             "/storage/emulated/0/Music",
             "/storage/emulated/0/DCIM"
     };
+    private static final Set<String> SCAN_ROOT_SET = new HashSet<>(Arrays.asList(SCAN_ROOTS));
 
     /** Maximum entries per API call to avoid request size limits. */
     private static final int BATCH_SIZE = 500;
@@ -137,9 +140,10 @@ public class MetadataSyncWorker extends Worker {
                                 null,
                                 null,
                                 dir.toAbsolutePath().toString(),
+                                getParentPathForSync(dir),
                                 dir.getFileName() != null ? dir.getFileName().toString() : "",
                                 0L,
-                                attrs.lastModifiedTime().toInstant(),
+                                attrs.lastModifiedTime().toMillis(),
                                 true
                         ));
 
@@ -152,9 +156,10 @@ public class MetadataSyncWorker extends Worker {
                                 null,
                                 null,
                                 file.toAbsolutePath().toString(),
+                                getParentPathForSync(file),
                                 file.getFileName().toString(),
                                 attrs.size(),
-                                attrs.lastModifiedTime().toInstant(),
+                                attrs.lastModifiedTime().toMillis(),
                                 false
                         ));
                         return FileVisitResult.CONTINUE;
@@ -174,12 +179,26 @@ public class MetadataSyncWorker extends Worker {
         return result;
     }
 
+    private String getParentPathForSync(Path path) {
+        String normalizedPath = normalizePath(path);
+        if (SCAN_ROOT_SET.contains(normalizedPath)) {
+            return "/";
+        }
+
+        Path parent = path.getParent();
+        return parent == null ? "/" : normalizePath(parent);
+    }
+
+    private String normalizePath(Path path) {
+        return path.toAbsolutePath().toString().replace("\\", "/");
+    }
+
     /**
      * Sends a heartbeat to update the device's lastSeen on the backend.
      */
     @SneakyThrows
     private void sendHeartbeat(String deviceId) {
-        ApiClient.getApiService().heartbeat(Map.of("deviceId", deviceId)).execute();
+        ApiClient.getApiService().heartbeat(Map.of("deviceID", deviceId)).execute();
         Log.d(TAG, "Heartbeat sent.");
     }
 }

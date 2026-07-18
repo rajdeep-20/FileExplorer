@@ -2,7 +2,6 @@ package com.example.fileexplorer.Remote;
 
 
 import android.content.Context;
-import android.service.settings.preferences.MetadataRequest;
 import android.util.Log;
 
 import androidx.work.Constraints;
@@ -65,7 +64,7 @@ public class SyncScheduler {
                 .addTag("ref_sync_immediate")
                 .build();
 
-        WorkManager.getInstance(context).enqueueUniqueWork(WORK_IMMEDIATE_JOBS, ExistingWorkPolicy.REPLACE, request);
+        WorkManager.getInstance(context).enqueueUniqueWork(WORK_IMMEDIATE_SYNC, ExistingWorkPolicy.REPLACE, request);
         Log.i(TAG,  "Immediate meta data sync enqueued");
     }
     public void triggerImmediateJobCheck(Context context){
