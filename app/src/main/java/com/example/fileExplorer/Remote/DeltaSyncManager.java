@@ -126,7 +126,15 @@ public class DeltaSyncManager {
                 dto.setParentPath(parentPath != null ? parentPath.replace("\\", "/") : "/");
                 dto.setSize(file.length());
                 dto.setLastModified(file.lastModified());
-                dto.setIsDirectory(file.isDirectory());
+                boolean isDir = file.isDirectory();
+                dto.setIsDirectory(isDir);
+                String ext = isDir ? "" : getExtension(file.getName());
+                String mime = isDir ? "inode/directory" : getMimeType(ext);
+                dto.setExtension(ext);
+                dto.setMimeType(mime);
+                if (!isDir && action.equals("UPSERT") && ThumbnailGenerator.isImage(ext, mime)) {
+                    dto.setThumbnail(ThumbnailGenerator.generateThumbnailBase64(fullPath));
+                }
 
                 List<FileMetaDataDto> list = new ArrayList<>();
                 list.add(dto);
@@ -152,5 +160,18 @@ public class DeltaSyncManager {
                 }
             }
         });
+    }
+
+    private String getExtension(String filename) {
+        if (filename == null) return "";
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) return "";
+        return filename.substring(dot + 1).toLowerCase();
+    }
+
+    private String getMimeType(String extension) {
+        if (extension.isEmpty()) return "application/octet-stream";
+        String mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        return mime != null ? mime : "application/octet-stream";
     }
 }

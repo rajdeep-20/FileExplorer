@@ -115,6 +115,18 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (Environment.isExternalStorageManager()) {
+                if (fileList.isEmpty()) {
+                    displayFiles();
+                }
+            }
+        }
+    }
+
     protected void displayFiles() {
         recyclerView = view.findViewById(getRecyclerView());
         recyclerView.setHasFixedSize(true);

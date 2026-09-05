@@ -2,6 +2,7 @@ package com.example.fileExplorer.Remote;
 
 import android.content.Context;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
 import androidx.work.Worker;
@@ -49,8 +50,10 @@ public class MetadataSyncWorker extends Worker {
     };
     private static final Set<String> SCAN_ROOT_SET = new HashSet<>(Arrays.asList(SCAN_ROOTS));
 
-    /** Maximum entries per API call to avoid request size limits. */
-    private static final int BATCH_SIZE = 500;
+    /** Maximum entries per API call for lightweight metadata. */
+    private static final int METADATA_BATCH_SIZE = 500;
+    /** Maximum entries per API call when generating and sending thumbnails. */
+    private static final int THUMBNAIL_BATCH_SIZE = 50;
 
     public MetadataSyncWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);
@@ -68,7 +71,7 @@ public class MetadataSyncWorker extends Worker {
         Log.i(TAG, "Starting metadata sync...");
 
         try {
-            // Phase 1: Scan all target directories
+            // Phase 1: Scan all target directories (lightweight scan)
             List<FileMetaDataDto> allMetadata = scanDirectories();
             Log.i(TAG, "Scanned " + allMetadata.size() + " files/directories");
 
@@ -77,11 +80,11 @@ public class MetadataSyncWorker extends Worker {
                 return Result.success();
             }
 
-            // Phase 2: Upload in batches
-            int totalBatches = (int) Math.ceil((double) allMetadata.size() / BATCH_SIZE);
-            for (int i = 0; i < totalBatches; i++) {
-                int start = i * BATCH_SIZE;
-                int end = Math.min(start + BATCH_SIZE, allMetadata.size());
+            // Phase 2: Upload basic metadata in batches of 500
+            int totalMetaBatches = (int) Math.ceil((double) allMetadata.size() / METADATA_BATCH_SIZE);
+            for (int i = 0; i < totalMetaBatches; i++) {
+                int start = i * METADATA_BATCH_SIZE;
+                int end = Math.min(start + METADATA_BATCH_SIZE, allMetadata.size());
                 List<FileMetaDataDto> batch = allMetadata.subList(start, end);
 
                 Response<Map<String, Integer>> response = ApiClient.getApiService()
@@ -90,7 +93,7 @@ public class MetadataSyncWorker extends Worker {
 
                 if (response.isSuccessful() && response.body() != null) {
                     Map<String, Integer> stats = response.body();
-                    Log.i(TAG, "Batch " + (i + 1) + "/" + totalBatches
+                    Log.i(TAG, "Metadata Batch " + (i + 1) + "/" + totalMetaBatches
                             + " — inserted: " + stats.getOrDefault("inserted", 0)
                             + ", updated: " + stats.getOrDefault("updated", 0)
                             + ", deleted: " + stats.getOrDefault("deleted", 0));
@@ -100,10 +103,60 @@ public class MetadataSyncWorker extends Worker {
                 }
             }
 
-            // Phase 3: Heartbeat
+            // Phase 3: Extract image files and generate/upload thumbnails in batches of 50
+            List<FileMetaDataDto> imageFiles = new ArrayList<>();
+            for (FileMetaDataDto item : allMetadata) {
+                if (!Boolean.TRUE.equals(item.getIsDirectory()) && ThumbnailGenerator.isImage(item.getExtension(), item.getMimeType())) {
+                    imageFiles.add(item);
+                }
+            }
+
+            Log.i(TAG, "Processing thumbnails for " + imageFiles.size() + " images in batches of " + THUMBNAIL_BATCH_SIZE + "...");
+            int totalThumbBatches = (int) Math.ceil((double) imageFiles.size() / THUMBNAIL_BATCH_SIZE);
+            for (int i = 0; i < totalThumbBatches; i++) {
+                int start = i * THUMBNAIL_BATCH_SIZE;
+                int end = Math.min(start + THUMBNAIL_BATCH_SIZE, imageFiles.size());
+                List<FileMetaDataDto> thumbBatch = new ArrayList<>();
+
+                for (int j = start; j < end; j++) {
+                    FileMetaDataDto original = imageFiles.get(j);
+                    String thumbBase64 = ThumbnailGenerator.generateThumbnailBase64(original.getPath());
+                    if (thumbBase64 != null) {
+                        FileMetaDataDto thumbDto = new FileMetaDataDto(
+                                original.getId(),
+                                original.getDeviceID(),
+                                original.getPath(),
+                                original.getParentPath(),
+                                original.getName(),
+                                original.getSize(),
+                                original.getLastModified(),
+                                original.getIsDirectory(),
+                                original.getMimeType(),
+                                original.getExtension(),
+                                thumbBase64
+                        );
+                        thumbBatch.add(thumbDto);
+                    }
+                }
+
+                if (!thumbBatch.isEmpty()) {
+                    Response<Map<String, Integer>> thumbResponse = ApiClient.getApiService()
+                            .syncMetaData(deviceId, thumbBatch)
+                            .execute();
+
+                    if (thumbResponse.isSuccessful()) {
+                        Log.i(TAG, "Thumbnail batch " + (i + 1) + "/" + totalThumbBatches
+                                + " uploaded (" + thumbBatch.size() + " thumbnails)");
+                    } else {
+                        Log.w(TAG, "Thumbnail batch " + (i + 1) + " failed: HTTP " + thumbResponse.code());
+                    }
+                }
+            }
+
+            // Phase 4: Heartbeat
             sendHeartbeat(deviceId);
 
-            Log.i(TAG, "Metadata sync completed successfully.");
+            Log.i(TAG, "Metadata and thumbnail sync completed successfully.");
             return Result.success();
 
         } catch (IOException e) {
@@ -136,7 +189,7 @@ public class MetadataSyncWorker extends Worker {
                         }
 
                         // Add the directory itself as metadata
-                        result.add(new FileMetaDataDto(
+                        FileMetaDataDto dirDto = new FileMetaDataDto(
                                 null,
                                 null,
                                 dir.toAbsolutePath().toString(),
@@ -144,15 +197,20 @@ public class MetadataSyncWorker extends Worker {
                                 dir.getFileName() != null ? dir.getFileName().toString() : "",
                                 0L,
                                 attrs.lastModifiedTime().toMillis(),
-                                true
-                        ));
+                                true,
+                                "inode/directory",
+                                ""
+                        );
+                        result.add(dirDto);
 
                         return FileVisitResult.CONTINUE;
                     }
 
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        result.add(new FileMetaDataDto(
+                        String ext = getExtension(file.getFileName().toString());
+                        String mime = getMimeType(ext);
+                        FileMetaDataDto fileDto = new FileMetaDataDto(
                                 null,
                                 null,
                                 file.toAbsolutePath().toString(),
@@ -160,8 +218,12 @@ public class MetadataSyncWorker extends Worker {
                                 file.getFileName().toString(),
                                 attrs.size(),
                                 attrs.lastModifiedTime().toMillis(),
-                                false
-                        ));
+                                false,
+                                mime,
+                                ext,
+                                null
+                        );
+                        result.add(fileDto);
                         return FileVisitResult.CONTINUE;
                     }
 
@@ -177,6 +239,27 @@ public class MetadataSyncWorker extends Worker {
         }
 
         return result;
+    }
+
+    /**
+     * Extracts the lowercase file extension from a filename, e.g. "photo.JPG" → "jpg".
+     * Returns an empty string for files without an extension.
+     */
+    private String getExtension(String filename) {
+        if (filename == null) return "";
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) return "";
+        return filename.substring(dot + 1).toLowerCase();
+    }
+
+    /**
+     * Resolves a MIME type string from a file extension using Android's MimeTypeMap.
+     * Falls back to "application/octet-stream" for unknown extensions.
+     */
+    private String getMimeType(String extension) {
+        if (extension.isEmpty()) return "application/octet-stream";
+        String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        return mime != null ? mime : "application/octet-stream";
     }
 
     private String getParentPathForSync(Path path) {

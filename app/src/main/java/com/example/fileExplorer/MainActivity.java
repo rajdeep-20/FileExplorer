@@ -1,5 +1,8 @@
 package com.example.fileExplorer;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -10,9 +13,13 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
+import com.example.fileExplorer.Remote.DeltaSyncManager;
 import com.example.fileExplorer.Remote.SyncScheduler;
 import com.example.fileExplorer.fragments.BaseFileFragment;
 import com.example.fileExplorer.fragments.CardFragment;
@@ -78,11 +85,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     private boolean hasStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return android.os.Environment.isExternalStorageManager();
         } else {
-            return androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                    && androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
         }
     }
 
@@ -102,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onResume() {
         super.onResume();
-        com.example.fileExplorer.Remote.DeltaSyncManager.getInstance(this).start();
+            DeltaSyncManager.getInstance(this).start();
         
         if (hasStoragePermission() && shouldSync()) {
             SyncScheduler.triggerImmediateSync(this);
@@ -113,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     protected void onPause() {
         super.onPause();
-        com.example.fileExplorer.Remote.DeltaSyncManager.getInstance(this).stop();
+        DeltaSyncManager.getInstance(this).stop();
     }
 
     @Override
@@ -130,12 +137,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (id == R.id.sort_name_asc) order = SortingOrder.SortingOrderEnum.NAME_ASC;
         else if (id == R.id.sort_name_desc) order = SortingOrder.SortingOrderEnum.NAME_DESC;
         else if (id == R.id.sort_time_asc) order = SortingOrder.SortingOrderEnum.TIME_ASC;
-        else if (id == R.id.sort_time_desc) order = SortingOrder.SortingOrderEnum.TIME_DESC;
+        else if (id == R.id.sort_time_desc) order =SortingOrder.SortingOrderEnum.TIME_DESC;
         else if (id == R.id.sort_size_asc) order = SortingOrder.SortingOrderEnum.SIZE_ASC;
         else if (id == R.id.sort_size_desc) order = SortingOrder.SortingOrderEnum.SIZE_DESC;
 
         if (order != null) {
-            androidx.fragment.app.Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+            Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
             if (currentFragment instanceof BaseFileFragment) {
                 ((BaseFileFragment) currentFragment).sortFiles(order);
             }
@@ -149,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         
-        getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
 
         if (id == R.id.nav_home) {
             getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new HomeFragment()).commit();

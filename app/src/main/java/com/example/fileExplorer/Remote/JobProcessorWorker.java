@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.os.PowerManager;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
 import androidx.work.Worker;
@@ -13,6 +14,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
+import java.util.List;
 import java.util.Map;
 
 import lombok.SneakyThrows;
@@ -103,9 +106,13 @@ public class JobProcessorWorker extends Worker {
         {
             processDownloadJob(jobDto);
         }
-        else if ("UPLOAD".equals(type)) 
+        else if ("UPLOAD".equals(type))
         {
             processUploadJob(jobDto);
+        }
+        else if ("REFRESH_DIR".equals(type))
+        {
+            processRefreshDirJob(jobDto);
         }
         else {
             Log.w(TAG, "Unknown Job type: " + type + ". Marking as failed.");
@@ -185,6 +192,107 @@ public class JobProcessorWorker extends Worker {
             Log.e(TAG, "Error saving downloaded file", e);
             reportJobFailed(jobDto.getJobID(), "Error saving file: " + e.getMessage());
         }
+    }
+
+    /**
+     * Handles a REFRESH_DIR job: scans the single requested directory (non-recursive),
+     * pushes fresh metadata to the backend, then marks the job COMPLETED.
+     */
+    private void processRefreshDirJob(JobDto jobDto) throws IOException {
+        String dirPath = jobDto.getPayload();
+        String deviceID = DeviceIdentityManager.getDeviceID(getApplicationContext());
+
+        if (dirPath == null || dirPath.isBlank()) {
+            reportJobFailed(jobDto.getJobID(), "REFRESH_DIR job has no path payload");
+            return;
+        }
+
+        java.nio.file.Path dir = java.nio.file.Paths.get(dirPath);
+        if (!java.nio.file.Files.exists(dir) || !java.nio.file.Files.isDirectory(dir)) {
+            reportJobFailed(jobDto.getJobID(), "Directory not found: " + dirPath);
+            return;
+        }
+
+        Log.i(TAG, "REFRESH_DIR: scanning " + dirPath);
+        java.util.List<FileMetaDataDto> batch = new java.util.ArrayList<>();
+
+        try (java.nio.file.DirectoryStream<java.nio.file.Path> stream =
+                     java.nio.file.Files.newDirectoryStream(dir)) {
+            for (java.nio.file.Path entry : stream) {
+                java.nio.file.attribute.BasicFileAttributes attrs =
+                        java.nio.file.Files.readAttributes(
+                                entry, java.nio.file.attribute.BasicFileAttributes.class);
+                boolean isDir = attrs.isDirectory();
+                String name   = entry.getFileName().toString();
+                String ext    = isDir ? "" : getExtension(name);
+                String mime   = isDir ? "inode/directory" : getMimeType(ext);
+                String parent = dirPath.replace("\\", "/");
+
+                String thumb = null;
+                if (!isDir && ThumbnailGenerator.isImage(ext, mime)) {
+                    thumb = ThumbnailGenerator.generateThumbnailBase64(entry.toAbsolutePath().toString());
+                }
+
+                batch.add(new FileMetaDataDto(
+                        null,
+                        null,
+                        entry.toAbsolutePath().toString(),
+                        parent,
+                        name,
+                        isDir ? 0L : attrs.size(),
+                        attrs.lastModifiedTime().toMillis(),
+                        isDir,
+                        mime,
+                        ext,
+                        thumb
+                ));
+            }
+        } catch (AccessDeniedException e) {
+            reportJobFailed(jobDto.getJobID(), "Access Denied: " + dirPath);
+            return;
+        } catch (IOException e) {
+            reportJobFailed(jobDto.getJobID(), "Failed to read directory: " + e.getMessage());
+            return;
+        }
+
+        if (!batch.isEmpty()) {
+            final int BATCH_SIZE = 50;
+            int totalBatches = (int) Math.ceil((double) batch.size() / BATCH_SIZE);
+            for (int i = 0; i < totalBatches; i++) {
+                int start = i * BATCH_SIZE;
+                int end = Math.min(start + BATCH_SIZE, batch.size());
+                List<FileMetaDataDto> subBatch = batch.subList(start, end);
+
+                retrofit2.Response<java.util.Map<String, Integer>> syncResp =
+                        ApiClient.getApiService().syncMetaData(deviceID, subBatch).execute();
+                if (!syncResp.isSuccessful()) {
+                    reportJobFailed(jobDto.getJobID(),
+                            "Metadata sync failed with HTTP " + syncResp.code());
+                    return;
+                }
+            }
+            Log.i(TAG, "REFRESH_DIR: synced " + batch.size() + " entries for " + dirPath + " in batches of " + BATCH_SIZE);
+        }
+
+        ApiClient.getApiService()
+                .updateJobStatus(jobDto.getJobID(), java.util.Map.of("status", "COMPLETED"))
+                .execute();
+        Log.i(TAG, "REFRESH_DIR job " + jobDto.getJobID() + " completed.");
+    }
+
+    /** Extracts the lowercase extension from a filename, e.g. "File.JPG" -> "jpg". */
+    private String getExtension(String filename) {
+        if (filename == null) return "";
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) return "";
+        return filename.substring(dot + 1).toLowerCase();
+    }
+
+    /** Resolves a MIME type from an extension; falls back to application/octet-stream. */
+    private String getMimeType(String extension) {
+        if (extension.isEmpty()) return "application/octet-stream";
+        String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        return mime != null ? mime : "application/octet-stream";
     }
 
     @SneakyThrows

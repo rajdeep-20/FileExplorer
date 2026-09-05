@@ -2,7 +2,15 @@ package com.example.fileExplorer;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.os.ParcelFileDescriptor;
+import android.graphics.pdf.PdfRenderer;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -12,15 +20,24 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class FileAdapter extends RecyclerView.Adapter<FileViewHolder> {
 
     private final Context context;
     private final List<FileItem> items;
     private final OnFileSelectedListener listener;
+    /** Background thread pool for heavy thumbnail rendering (PDF, APK). */
+    private final ExecutorService thumbExecutor = Executors.newFixedThreadPool(2);
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public FileAdapter(Context context, List<FileItem> items, OnFileSelectedListener listener) {
         this.context  = context;
@@ -92,19 +109,56 @@ public class FileAdapter extends RecyclerView.Adapter<FileViewHolder> {
         holder.imgFile.setImageResource(iconRes);
         holder.imgFile.setColorFilter(accentColor);
 
-        // --- Asynchronous Thumbnail Loading with Glide ---
+        // --- Asynchronous Thumbnail Loading ---
+        Glide.with(context).clear(holder.imgFile); // clear stale bitmaps from recycled views
         if (isMedia) {
+            // Images and Videos: Glide handles these natively
             Glide.with(context)
                     .load(new File(current.getAbsolutePath()))
                     .placeholder(iconRes)
                     .centerCrop()
+                    .listener(new RequestListener<Drawable>() {
+                        @Override
+                        public boolean onLoadFailed(GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                            holder.imgFile.setColorFilter(accentColor);
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onResourceReady(android.graphics.drawable.Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                            holder.imgFile.clearColorFilter();
+                            return false;
+                        }
+                    })
                     .into(holder.imgFile);
-            holder.imgFile.clearColorFilter();
-        } else {
-            Glide.with(context).clear(holder.imgFile);
+        } else if (name.endsWith(".pdf")) {
+            final int fallbackIcon = iconRes;
+            thumbExecutor.execute(() -> {
+                Bitmap thumb = renderPdfThumbnail(current.getAbsolutePath());
+                mainHandler.post(() -> {
+                    if (thumb != null) {
+                        Glide.with(context).load(thumb).centerCrop().into(holder.imgFile);
+                        holder.imgFile.clearColorFilter();
+                    } else {
+                        holder.imgFile.setImageResource(fallbackIcon);
+                    }
+                });
+            });
+        } else if (name.endsWith(".apk")) {
+            final int fallbackIcon = iconRes;
+            thumbExecutor.execute(() -> {
+                Drawable apkIcon = extractApkIcon(current.getAbsolutePath());
+                mainHandler.post(() -> {
+                    if (apkIcon != null) {
+                        Glide.with(context).load(apkIcon).centerCrop().into(holder.imgFile);
+                        holder.imgFile.clearColorFilter();
+                    } else {
+                        holder.imgFile.setImageResource(fallbackIcon);
+                    }
+                });
+            });
         }
 
-        // Color the circular icon background
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
         int bgColor = (accentColor & 0x00FFFFFF) | 0x33000000;
@@ -136,5 +190,48 @@ public class FileAdapter extends RecyclerView.Adapter<FileViewHolder> {
         this.items.clear();
         this.items.addAll(newItems);
         notifyDataSetChanged();
+    }
+
+    /**
+     * Renders the first page of a PDF file into a Bitmap thumbnail.
+     * Returns null if the file cannot be read or rendered.
+     */
+    private Bitmap renderPdfThumbnail(String filePath) {
+        try {
+            File file = new File(filePath);
+            if (!file.exists() || file.length() == 0) return null;
+            ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+            PdfRenderer renderer = new PdfRenderer(pfd);
+            PdfRenderer.Page page = renderer.openPage(0);
+            int width = 512;
+            int height = (int) (width * ((float) page.getHeight() / page.getWidth()));
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            bitmap.eraseColor(android.graphics.Color.WHITE);
+            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY);
+            page.close();
+            renderer.close();
+            pfd.close();
+            return bitmap;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Extracts the launcher icon from an APK file using PackageManager.
+     * Returns null if the package info cannot be read.
+     */
+    private android.graphics.drawable.Drawable extractApkIcon(String apkPath) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            android.content.pm.PackageInfo pi = pm.getPackageArchiveInfo(apkPath, 0);
+            if (pi == null) return null;
+            ApplicationInfo ai = pi.applicationInfo;
+            ai.sourceDir = apkPath;
+            ai.publicSourceDir = apkPath;
+            return ai.loadIcon(pm);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
