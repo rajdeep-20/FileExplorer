@@ -8,13 +8,6 @@ import android.widget.LinearLayout;
 import com.example.fileExplorer.FileItem;
 import com.example.fileExplorer.R;
 
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-
 public class HomeFragment extends BaseFileFragment {
     private LinearLayout linearImage, linearVideo, linearDownloads, linearApks, linearMusic, linearDocs;
 
@@ -70,13 +63,11 @@ public class HomeFragment extends BaseFileFragment {
 
     @Override
     protected void openDirectory(FileItem fileItem) {
-        Bundle bundle = new Bundle();
-        bundle.putString("path", fileItem.getAbsolutePath());
-        InternalFragment internalFragment = new InternalFragment();
-        internalFragment.setArguments(bundle);
+        NavigableFragment child = NavigableFragment.newInstance(
+                NavigableFragment.TYPE_INTERNAL, fileItem.getAbsolutePath());
         getParentFragmentManager().beginTransaction()
-                .replace(R.id.fragment_container, internalFragment)
-                .addToBackStack("InternalFragment")
+                .replace(R.id.fragment_container, child)
+                .addToBackStack("NavigableFragment")
                 .commit();
     }
 }

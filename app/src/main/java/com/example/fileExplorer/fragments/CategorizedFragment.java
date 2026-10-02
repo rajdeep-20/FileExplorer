@@ -9,12 +9,12 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import com.example.fileExplorer.FileAdapter;
 import com.example.fileExplorer.FileItem;
 import com.example.fileExplorer.FileLoadEngine;
+import com.example.fileExplorer.FileTypeRegistry;
 import com.example.fileExplorer.R;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Predicate;
 
 public class CategorizedFragment extends BaseFileFragment {
 
@@ -75,24 +75,8 @@ public class CategorizedFragment extends BaseFileFragment {
     }
 
     private boolean filterFile(Path entry) {
-        String name = entry.getFileName().toString().toLowerCase();
-        if (fileType != null) {
-            switch (fileType) {
-                case "images":
-                    return name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif");
-                case "video":
-                    return name.endsWith(".mp4") || name.endsWith(".mkv") || name.endsWith(".avi") || name.endsWith(".3gp");
-                case "music":
-                    return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".ogg");
-                case "documents":
-                    return name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".docx") || name.endsWith(".txt") || name.endsWith(".xls") || name.endsWith(".xlsx") || name.endsWith(".ppt") || name.endsWith(".pptx");
-                case "APK":
-                    return name.endsWith(".apk");
-                case "downloads":
-                    return true;
-            }
-        }
-        return false;
+        if (fileType == null) return false;
+        return FileTypeRegistry.matchesCategory(entry.getFileName().toString(), fileType);
     }
 
     @Override
@@ -107,13 +91,11 @@ public class CategorizedFragment extends BaseFileFragment {
 
     @Override
     protected void openDirectory(FileItem fileItem) {
-        Bundle bundle = new Bundle();
-        bundle.putString("path", fileItem.getAbsolutePath());
-        InternalFragment internalFragment = new InternalFragment();
-        internalFragment.setArguments(bundle);
+        NavigableFragment child = NavigableFragment.newInstance(
+                NavigableFragment.TYPE_INTERNAL, fileItem.getAbsolutePath());
         getParentFragmentManager().beginTransaction()
-                .replace(R.id.fragment_container, internalFragment)
-                .addToBackStack("InteranlFragment")
+                .replace(R.id.fragment_container, child)
+                .addToBackStack("NavigableFragment")
                 .commit();
     }
 }

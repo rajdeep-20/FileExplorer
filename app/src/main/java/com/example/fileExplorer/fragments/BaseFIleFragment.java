@@ -1,7 +1,7 @@
 package com.example.fileExplorer.fragments;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Intent;
@@ -34,7 +34,6 @@ import com.example.fileExplorer.FileLoadEngine;
 import com.example.fileExplorer.FileOpener;
 import com.example.fileExplorer.OnFileSelectedListener;
 import com.example.fileExplorer.R;
-import com.example.fileExplorer.ScrollBarInterface;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -46,22 +45,27 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
-public abstract class BaseFileFragment extends Fragment implements OnFileSelectedListener, ScrollBarInterface {
+public abstract class BaseFileFragment extends Fragment implements OnFileSelectedListener {
     protected RecyclerView recyclerView;
     protected List<FileItem> fileList = new ArrayList<>();
     protected FileAdapter fileAdapter;
     protected FileLoadEngine fileLoadEngine = new FileLoadEngine();
-
     protected View view;
-    protected String[] items = {"Details", "Rename", "Delete", "Share"};
     protected SortingOrder.SortingOrderEnum currentSortOrder = SortingOrder.SortingOrderEnum.TIME_DESC;
 
-    @Override
-    public void setupScrollBar(RecyclerView recyclerView) {
-        // Handled in XML
+    /** Option items: label → icon resource. */
+    private static final Map<String, Integer> OPTIONS = new LinkedHashMap<>();
+    static {
+        OPTIONS.put("Details", R.drawable.ic_details);
+        OPTIONS.put("Rename",  R.drawable.ic_rename);
+        OPTIONS.put("Delete",  R.drawable.ic_delete);
+        OPTIONS.put("Share",   R.drawable.ic_share);
     }
+    private static final String[] OPTION_LABELS = OPTIONS.keySet().toArray(new String[0]);
 
     @Nullable
     @Override
@@ -73,13 +77,9 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
     }
 
     protected abstract int getSourceLayoutResId();
-
     protected abstract void onViewCreateCustom(View view);
-
     protected abstract String getTargetDirectoryPath();
-
     protected abstract int getRecyclerView();
-
     protected abstract void openDirectory(FileItem fileItem);
 
     protected void runTimePermission() {
@@ -119,10 +119,8 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
     public void onResume() {
         super.onResume();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (Environment.isExternalStorageManager()) {
-                if (fileList.isEmpty()) {
-                    displayFiles();
-                }
+            if (Environment.isExternalStorageManager() && fileList.isEmpty()) {
+                displayFiles();
             }
         }
     }
@@ -160,16 +158,6 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
     }
 
     @Override
-    public void onFileClick(File file) {
-        // Deprecated, use onFileItemClick
-    }
-
-    @Override
-    public void onFileLongClick(File file, int position) {
-        // Deprecated, use onFileItemLongClick
-    }
-
-    @Override
     public void onFileItemClick(FileItem fileItem) {
         if (fileItem.isDirectory()) {
             openDirectory(fileItem);
@@ -188,23 +176,19 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
         final Dialog optionalDialog = new Dialog(getContext());
         optionalDialog.setContentView(R.layout.option_diallogue);
         ListView listView = optionalDialog.findViewById(R.id.List);
-        listView.setAdapter(new CustomAdapter());
+        listView.setAdapter(new OptionAdapter());
         listView.setOnItemClickListener((parent, v, pos, id) -> {
-            handleOptionClick(items[pos], fileItem, optionalDialog);
+            handleOptionClick(OPTION_LABELS[pos], fileItem, optionalDialog);
         });
         optionalDialog.show();
     }
 
     private void handleOptionClick(String selectedItem, FileItem fileItem, Dialog dialog) {
-        File file = new File(fileItem.getAbsolutePath());
-        if (selectedItem.equals("Details")) {
-            showDetails(fileItem);
-        } else if (selectedItem.equals("Rename")) {
-            showRenameDialog(fileItem);
-        } else if (selectedItem.equals("Share")) {
-            shareFile(file);
-        } else if (selectedItem.equals("Delete")) {
-            showDeletedDialog(fileItem);
+        switch (selectedItem) {
+            case "Details": showDetails(fileItem); break;
+            case "Rename":  showRenameDialog(fileItem); break;
+            case "Share":   shareFile(new File(fileItem.getAbsolutePath())); break;
+            case "Delete":  showDeletedDialog(fileItem); break;
         }
         dialog.dismiss();
     }
@@ -227,46 +211,48 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
     }
 
     private void showDetails(FileItem fileItem) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Details");
         File file = new File(fileItem.getAbsolutePath());
         String date = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(file.lastModified()));
-        builder.setMessage("Name: " + fileItem.getName() + "\nSize: " + Formatter.formatShortFileSize(getContext(), fileItem.getFileSize()) + "\nPath: " + fileItem.getAbsolutePath() + "\nModified: " + date);
-        builder.setPositiveButton("OK", null);
-        builder.show();
+        new AlertDialog.Builder(getContext())
+                .setTitle("Details")
+                .setMessage("Name: " + fileItem.getName()
+                        + "\nSize: " + Formatter.formatShortFileSize(getContext(), fileItem.getFileSize())
+                        + "\nPath: " + fileItem.getAbsolutePath()
+                        + "\nModified: " + date)
+                .setPositiveButton("OK", null)
+                .show();
     }
 
     private void showRenameDialog(FileItem fileItem) {
-        AlertDialog.Builder rename = new AlertDialog.Builder(getContext());
-        rename.setTitle("Rename");
         EditText input = new EditText(getContext());
         input.setText(fileItem.getName());
-        rename.setView(input);
-        rename.setPositiveButton("OK", (d, w) -> {
-            File file = new File(fileItem.getAbsolutePath());
-            String newName = input.getText().toString();
-            File dest = new File(file.getParent(), newName);
-
-            if (file.renameTo(dest)) {
-                int currentPos = fileList.indexOf(fileItem);
-                if (currentPos != -1) {
-                    FileItem updatedItem = new FileItem(newName, dest.getAbsolutePath());
-                    updatedItem.updateMetadata(fileItem.isDirectory(), fileItem.getFileSize(), fileItem.getLastModified());
-                    fileList.set(currentPos, updatedItem);
-                    fileAdapter.notifyItemChanged(currentPos);
-                    Toast.makeText(getContext(), "Renamed", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-        rename.setNegativeButton("Cancel", null);
-        rename.show();
+        new AlertDialog.Builder(getContext())
+                .setTitle("Rename")
+                .setView(input)
+                .setPositiveButton("OK", (d, w) -> {
+                    File file = new File(fileItem.getAbsolutePath());
+                    String newName = input.getText().toString();
+                    File dest = new File(file.getParent(), newName);
+                    if (file.renameTo(dest)) {
+                        int currentPos = fileList.indexOf(fileItem);
+                        if (currentPos != -1) {
+                            FileItem updatedItem = new FileItem(newName, dest.getAbsolutePath());
+                            updatedItem.updateMetadata(fileItem.isDirectory(), fileItem.getFileSize(), fileItem.getLastModified());
+                            fileList.set(currentPos, updatedItem);
+                            fileAdapter.notifyItemChanged(currentPos);
+                            Toast.makeText(getContext(), "Renamed", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void shareFile(File file) {
         try {
+            Uri link = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".provider", file);
             Intent share = new Intent(Intent.ACTION_SEND);
             share.setType("*/*");
-            Uri link = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".provider", file);
             share.putExtra(Intent.EXTRA_STREAM, link);
             share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(Intent.createChooser(share, "Share"));
@@ -283,37 +269,18 @@ public abstract class BaseFileFragment extends Fragment implements OnFileSelecte
         }
     }
 
-    class CustomAdapter extends BaseAdapter {
-        @Override
-        public int getCount() {
-            return items.length;
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return items[position];
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
+    /** Simplified option list adapter using the OPTIONS map for label→icon lookup. */
+    private class OptionAdapter extends BaseAdapter {
+        @Override public int getCount() { return OPTION_LABELS.length; }
+        @Override public Object getItem(int pos) { return OPTION_LABELS[pos]; }
+        @Override public long getItemId(int pos) { return pos; }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            View view = getLayoutInflater().inflate(R.layout.option_layout, null);
-            TextView textView = view.findViewById(R.id.txtOption);
-            ImageView imageView = view.findViewById(R.id.imgOption);
-            textView.setText(items[position]);
-            if (items[position].equals("Details"))
-                imageView.setImageResource(R.drawable.ic_details);
-            else if (items[position].equals("Rename"))
-                imageView.setImageResource(R.drawable.ic_rename);
-            else if (items[position].equals("Delete"))
-                imageView.setImageResource(R.drawable.ic_delete);
-            else if (items[position].equals("Share"))
-                imageView.setImageResource(R.drawable.ic_share);
-            return view;
+            View row = getLayoutInflater().inflate(R.layout.option_layout, null);
+            ((TextView) row.findViewById(R.id.txtOption)).setText(OPTION_LABELS[position]);
+            ((ImageView) row.findViewById(R.id.imgOption)).setImageResource(OPTIONS.get(OPTION_LABELS[position]));
+            return row;
         }
     }
 }

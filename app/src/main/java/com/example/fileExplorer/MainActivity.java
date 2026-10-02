@@ -22,9 +22,8 @@ import androidx.fragment.app.FragmentManager;
 import com.example.fileExplorer.Remote.DeltaSyncManager;
 import com.example.fileExplorer.Remote.SyncScheduler;
 import com.example.fileExplorer.fragments.BaseFileFragment;
-import com.example.fileExplorer.fragments.CardFragment;
 import com.example.fileExplorer.fragments.HomeFragment;
-import com.example.fileExplorer.fragments.InternalFragment;
+import com.example.fileExplorer.fragments.NavigableFragment;
 import com.example.fileExplorer.fragments.SortingOrder;
 import com.example.fileExplorer.Remote.DeviceIdentityManager;
 import com.google.android.material.navigation.NavigationView;
@@ -57,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         toggle.syncState();
 
         if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new HomeFragment()).commit();
+            navigateTo(new HomeFragment());
             navigationView.setCheckedItem(R.id.nav_home);
         }
 
@@ -67,21 +66,24 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     drawerLayout.closeDrawer(GravityCompat.START);
                 } else {
-                    androidx.fragment.app.Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
-                    if (currentFragment instanceof HomeFragment) {
+                    Fragment current = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                    if (current instanceof HomeFragment) {
                         moveTaskToBack(true);
                     } else if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
                         getSupportFragmentManager().popBackStack();
                     } else {
-                        // If for some reason we aren't at HomeFragment and backstack is empty, 
-                        // go back to HomeFragment instead of closing
-                        getSupportFragmentManager().beginTransaction()
-                                .replace(R.id.fragment_container, new HomeFragment())
-                                .commit();
+                        navigateTo(new HomeFragment());
                     }
                 }
             }
         });
+    }
+
+    /** Replaces the fragment container with the given fragment (no back stack). */
+    private void navigateTo(Fragment fragment) {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit();
     }
 
     private boolean hasStoragePermission() {
@@ -159,13 +161,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         getSupportFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
 
         if (id == R.id.nav_home) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new HomeFragment()).commit();
+            navigateTo(new HomeFragment());
         } else if (id == R.id.nav_internal) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new InternalFragment()).commit();
+            navigateTo(NavigableFragment.newInstance(NavigableFragment.TYPE_INTERNAL));
         } else if (id == R.id.nav_card) {
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, new CardFragment()).commit();
-        }
-        else {
+            navigateTo(NavigableFragment.newInstance(NavigableFragment.TYPE_SDCARD));
+        } else {
             Toast.makeText(this, R.string.menuAbout, Toast.LENGTH_SHORT).show();
         }
         drawerLayout.closeDrawer(GravityCompat.START);

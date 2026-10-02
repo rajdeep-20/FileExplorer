@@ -5,6 +5,7 @@ import android.os.FileObserver;
 import android.util.Log;
 
 import com.example.fileExplorer.BuildConfig;
+import com.example.fileExplorer.FileUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -45,15 +46,15 @@ public class DeltaSyncManager {
     }
 
     public void start() {
-        if (!observers.isEmpty()) return; // Already running
-        Log.i(TAG, "Starting Hybrid Delta Sync Observers...");
+        if (!observers.isEmpty()) return;
+        Log.i(TAG, "Starting Delta Sync Observers...");
         for (String root : SCAN_ROOTS) {
             startObserving(root);
         }
     }
 
     public void stop() {
-        Log.i(TAG, "Stopping Hybrid Delta Sync Observers...");
+        Log.i(TAG, "Stopping Delta Sync Observers...");
         for (FileObserver observer : observers.values()) {
             observer.stopWatching();
         }
@@ -63,20 +64,18 @@ public class DeltaSyncManager {
     @SuppressWarnings("deprecation")
     private void startObserving(String path) {
         File file = new File(path);
-        if (!file.exists() || !file.isDirectory()) return;
-        if (observers.containsKey(path)) return;
+        if (!file.exists() || !file.isDirectory() || observers.containsKey(path)) return;
 
         int mask = FileObserver.CREATE | FileObserver.DELETE | FileObserver.MODIFY | FileObserver.MOVED_TO | FileObserver.MOVED_FROM;
         FileObserver observer = new FileObserver(path, mask) {
             @Override
             public void onEvent(int event, String pathName) {
-                if (pathName == null) return;
-                handleEvent(event, path + "/" + pathName);
+                if (pathName != null) handleEvent(event, path + "/" + pathName);
             }
         };
         observer.startWatching();
         observers.put(path, observer);
-        
+
         File[] children = file.listFiles();
         if (children != null) {
             for (File child : children) {
@@ -90,7 +89,7 @@ public class DeltaSyncManager {
     private void handleEvent(int event, String fullPath) {
         int e = event & FileObserver.ALL_EVENTS;
         File file = new File(fullPath);
-        
+
         if (e == FileObserver.CREATE || e == FileObserver.MOVED_TO) {
             if (file.isDirectory() && !file.getName().startsWith(".")) {
                 startObserving(fullPath);
@@ -117,22 +116,23 @@ public class DeltaSyncManager {
                 }
 
                 File file = new File(fullPath);
+                boolean isDir = file.isDirectory();
+                String ext = isDir ? "" : FileUtils.getExtension(file.getName());
+                String mime = isDir ? "inode/directory" : FileUtils.getMimeType(ext);
+                String parentPath = file.getParent();
+
                 FileMetaDataDto dto = new FileMetaDataDto();
                 dto.setPath(fullPath);
                 dto.setDeviceID(deviceId);
                 dto.setName(file.getName());
-
-                String parentPath = file.getParent();
                 dto.setParentPath(parentPath != null ? parentPath.replace("\\", "/") : "/");
                 dto.setSize(file.length());
                 dto.setLastModified(file.lastModified());
-                boolean isDir = file.isDirectory();
                 dto.setIsDirectory(isDir);
-                String ext = isDir ? "" : getExtension(file.getName());
-                String mime = isDir ? "inode/directory" : getMimeType(ext);
                 dto.setExtension(ext);
                 dto.setMimeType(mime);
-                if (!isDir && action.equals("UPSERT") && ThumbnailGenerator.isImage(ext, mime)) {
+
+                if (!isDir && "UPSERT".equals(action) && ThumbnailGenerator.isImage(ext, mime)) {
                     dto.setThumbnail(ThumbnailGenerator.generateThumbnailBase64(fullPath));
                 }
 
@@ -141,11 +141,10 @@ public class DeltaSyncManager {
 
                 Log.d(TAG, "Sending delta: " + action + " for " + fullPath);
 
-                Call<Void> call = action.equals("DELETE") ?
-                        ApiClient.getApiService().syncDeltaDelete(deviceId, fullPath) :
-                        ApiClient.getApiService().syncDeltaUpsert(deviceId, list);
+                Call<Void> call = "DELETE".equals(action)
+                        ? ApiClient.getApiService().syncDeltaDelete(deviceId, fullPath)
+                        : ApiClient.getApiService().syncDeltaUpsert(deviceId, list);
 
-                // Use execute() since we are already in a background thread from the executor
                 Response<Void> response = call.execute();
                 if (!response.isSuccessful()) {
                     Log.e(TAG, "Delta sync failed for " + fullPath + " HTTP " + response.code());
@@ -156,22 +155,8 @@ public class DeltaSyncManager {
                 Log.e(TAG, "Delta sync error for " + fullPath + ": " + e.getMessage());
                 if (e instanceof java.net.ConnectException) {
                     Log.e(TAG, "Connection failed! Check if server is running at " + BuildConfig.BASE_URL);
-                    Log.e(TAG, "If using Android Emulator (AVD), try changing BASE_URL to http://10.0.2.2:8354 in build.gradle");
                 }
             }
         });
-    }
-
-    private String getExtension(String filename) {
-        if (filename == null) return "";
-        int dot = filename.lastIndexOf('.');
-        if (dot < 0 || dot == filename.length() - 1) return "";
-        return filename.substring(dot + 1).toLowerCase();
-    }
-
-    private String getMimeType(String extension) {
-        if (extension.isEmpty()) return "application/octet-stream";
-        String mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
-        return mime != null ? mime : "application/octet-stream";
     }
 }
